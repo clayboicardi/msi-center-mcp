@@ -299,7 +299,7 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       { workload: "embeddings", advice: "nomic-embed-text is tiny; any scenario works." }
     ],
     sources: [
-      "Clay's CLAUDE.md hardware notes (model ceiling observations on this machine)",
+      "Owner's empirical model-size ceiling observations on this machine",
       "nvidia-smi observation (12227MB VRAM total, driver 610.47)"
     ],
     confidence: "verified_live"

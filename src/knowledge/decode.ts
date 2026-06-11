@@ -1,13 +1,7 @@
 import type { MsiCenterRawState, RegistryValues } from "../adapters/msiCenterRegistry.js";
 import type { MappingConfidence } from "./msiRegistryMap.js";
-import {
-  batteryMasterMapping,
-  decodeWithMapping,
-  gpuSwitchMapping,
-  scenarioFanMapping,
-  scenarioPerformanceMapping,
-  userScenarioModeMapping
-} from "./msiRegistryMap.js";
+import { decodeWithMapping } from "./msiRegistryMap.js";
+import { selectMachineProfile } from "./machineProfiles.js";
 
 export interface DecodedValue<T = string> {
   raw: number | string | null;
@@ -29,6 +23,11 @@ export interface ScenarioPreset {
 
 export interface MsiCenterState {
   available: boolean;
+  machine_profile: {
+    id: string;
+    display_name: string;
+    matched: boolean;
+  };
   base_module_version: string | null;
   ec_version: string | null;
   user_scenario: DecodedValue;
@@ -101,9 +100,23 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
   const userScenario = findKey(raw, "User Scenario");
   const scenario = findKey(raw, "Scenario");
   const general = findKey(raw, "GeneralSetting");
+  const baseInfo = findKey(raw, "BaseInfo");
+
+  const ecVersion = stringOrNull(scenario?.ECversion);
+  const { profile, matched } = selectMachineProfile({
+    ec_version: ecVersion,
+    platform_type: typeof baseInfo?.PlatformType === "number" ? baseInfo.PlatformType : null
+  });
+  const mappings = profile.mappings;
 
   if (raw.available && !userScenario) {
     warnings.push("User Scenario registry key was not found; MSI Center may have changed layout.");
+  }
+
+  if (raw.available && !matched) {
+    warnings.push(
+      `No calibrated machine profile matched (EC: ${ecVersion ?? "unknown"}); decoding with the generic MSI profile at reduced confidence.`
+    );
   }
 
   const scenarioPresets: ScenarioPreset[] = [];
@@ -117,19 +130,27 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
       index,
       performance: decodeWithMapping(
         typeof preset.Performance === "number" ? preset.Performance : null,
-        scenarioPerformanceMapping
+        mappings.scenarioPerformance
       ),
-      fan: decodeWithMapping(typeof preset.Fan === "number" ? preset.Fan : null, scenarioFanMapping)
+      fan: decodeWithMapping(
+        typeof preset.Fan === "number" ? preset.Fan : null,
+        mappings.scenarioFan
+      )
     });
   }
 
   return {
     available: raw.available,
+    machine_profile: {
+      id: profile.id,
+      display_name: profile.display_name,
+      matched
+    },
     base_module_version: stringOrNull(baseModule?.Version),
-    ec_version: stringOrNull(scenario?.ECversion),
+    ec_version: ecVersion,
     user_scenario: decodeWithMapping(
       typeof userScenario?.Mode === "number" ? userScenario.Mode : null,
-      userScenarioModeMapping
+      mappings.userScenarioMode
     ),
     ai_engine_enabled: decodeBooleanFlag(
       userScenario?.Intelligent,
@@ -137,11 +158,11 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
     ),
     gpu_switch: decodeWithMapping(
       typeof general?.GPU_Switch === "number" ? general.GPU_Switch : null,
-      gpuSwitchMapping
+      mappings.gpuSwitch
     ),
     battery_master_mode: decodeWithMapping(
       typeof general?.BatteryMode === "number" ? general.BatteryMode : null,
-      batteryMasterMapping
+      mappings.batteryMaster
     ),
     whisper_mode_enabled: decodeBooleanFlag(
       general?.WhisperMode,

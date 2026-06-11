@@ -18,6 +18,7 @@ console.log(
   JSON.stringify(
     {
       available: state.available,
+      machine_profile: state.machine_profile,
       base_module_version: state.base_module_version,
       ec_version: state.ec_version,
       user_scenario: state.user_scenario,

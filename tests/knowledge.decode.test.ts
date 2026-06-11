@@ -19,6 +19,9 @@ describe("MSI Center state decoding", () => {
     const state = decodeMsiCenterState(rawStateFromFixture());
 
     expect(state.available).toBe(true);
+    // EC firmware prefix 15MM selects the calibrated Vector A16 HX profile.
+    expect(state.machine_profile.id).toBe("msi-vector-a16-hx");
+    expect(state.machine_profile.matched).toBe(true);
     expect(state.base_module_version).toBe("1.0.2605.0601");
     expect(state.ec_version).toContain("15MM");
 
@@ -53,6 +56,24 @@ describe("MSI Center state decoding", () => {
       (preset) => preset.fan.decoded === "cooler_boost"
     );
     expect(coolerBoost?.index).toBe(1);
+  });
+
+  test("unrecognized machines fall back to the generic profile at reduced confidence", () => {
+    const state = decodeMsiCenterState({
+      available: true,
+      keys: {
+        "HKEY_LOCAL_MACHINE\\...\\Base Module\\User Scenario": { Mode: 1 },
+        "HKEY_LOCAL_MACHINE\\...\\Base Module\\Scenario": { ECversion: "17ZZIMS1.000" }
+      },
+      warnings: []
+    });
+
+    expect(state.machine_profile.id).toBe("generic-msi");
+    expect(state.machine_profile.matched).toBe(false);
+    // Same hypothesis map, but never presented as verified on foreign hardware.
+    expect(state.user_scenario.decoded).toBe("extreme_performance");
+    expect(state.user_scenario.confidence).toBe("inferred");
+    expect(state.warnings.join(" ")).toContain("generic MSI profile");
   });
 
   test("unknown raw values decode to null with unknown confidence", () => {
