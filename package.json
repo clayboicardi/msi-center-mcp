@@ -1,7 +1,7 @@
 {
   "name": "msi-center-mcp",
-  "version": "0.1.0",
-  "description": "Read-only Windows laptop performance telemetry MCP server.",
+  "version": "0.2.0",
+  "description": "Read-only MSI laptop telemetry and MSI Center insight MCP server.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
