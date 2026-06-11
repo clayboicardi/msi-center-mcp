@@ -65,6 +65,27 @@ describe("safe command runner", () => {
     expect(calls).toEqual([{ file: "powercfg", args: ["/list"], shell: false }]);
   });
 
+  test("reports timedOut when the child process is killed by the timeout", async () => {
+    const runner = createCommandRunner({
+      execFileImpl: (_file, _args, _options, callback) => {
+        const error = new Error("Command was killed") as NodeJS.ErrnoException & {
+          killed?: boolean;
+          signal?: string;
+        };
+        error.killed = true;
+        error.signal = "SIGTERM";
+        callback(error, "", "");
+        return {} as never;
+      }
+    });
+
+    const result = await runner.run("powercfg", "powercfg", ["/list"], 50);
+
+    expect(result.ok).toBe(false);
+    expect(result.timedOut).toBe(true);
+    expect(result.warnings.join(" ")).toContain("timed out");
+  });
+
   test("rejects write-capable powercfg arguments", async () => {
     const runner = createCommandRunner({
       execFileImpl: (_file, _args, _options, callback) => {

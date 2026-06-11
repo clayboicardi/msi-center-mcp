@@ -41,6 +41,11 @@ interface CommandRule {
   validateArgs: (args: readonly string[]) => boolean;
 }
 
+type ExecError = NodeJS.ErrnoException & {
+  killed?: boolean;
+  signal?: NodeJS.Signals | null;
+};
+
 const NVIDIA_QUERY_FIELDS = [
   "name",
   "driver_version",
@@ -132,11 +137,16 @@ export function createCommandRunner(options: { execFileImpl?: ExecFileImpl } = {
             maxBuffer: 1024 * 1024
           },
           (error, stdout, stderr) => {
+            const execError = error as ExecError | null;
             const exitCode = typeof error?.code === "number" ? error.code : error ? 1 : 0;
-            const timedOut =
-              error?.name === "TimeoutError" ||
-              error?.message?.toLowerCase().includes("timed out") === true ||
-              error?.code === "ETIMEDOUT";
+            // execFile's timeout kills the child with SIGTERM; Node reports that
+            // through killed/signal, never through a "TimeoutError" name.
+            const timedOut = Boolean(
+              execError &&
+                (execError.killed === true ||
+                  execError.signal === "SIGTERM" ||
+                  execError.code === "ETIMEDOUT")
+            );
             const stderrText = Buffer.isBuffer(stderr) ? stderr.toString("utf8") : stderr;
             const warnings: string[] = [];
 
