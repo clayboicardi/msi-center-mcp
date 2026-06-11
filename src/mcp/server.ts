@@ -15,12 +15,18 @@ import {
   getSystemInfo,
   getTelemetrySnapshot
 } from "../telemetry/snapshot.js";
+import { decodeMsiCenterState } from "../knowledge/decode.js";
+import { getKnowledgeEntry, listKnowledgeTopics } from "../knowledge/msiKnowledge.js";
 import { dryRunProfile, listProfiles } from "../profiles/profileEngine.js";
+import { checkProfileReadiness } from "../profiles/readiness.js";
+import type { ProfileName } from "../profiles/profiles.js";
 import {
   captureTelemetryLogInputSchema,
+  checkProfileReadinessInputSchema,
   compareTelemetryLogsInputSchema,
   dryRunProfileInputSchema,
   emptyInputSchema,
+  explainMsiSettingInputSchema,
   summarizeTelemetryLogInputSchema,
   telemetrySnapshotInputSchema
 } from "./schemas.js";
@@ -36,7 +42,11 @@ export const TOOL_NAMES = [
   "summarize_telemetry_log",
   "compare_telemetry_logs",
   "list_profiles",
-  "dry_run_profile"
+  "dry_run_profile",
+  "get_msi_center_state",
+  "get_battery_health",
+  "explain_msi_setting",
+  "check_profile_readiness"
 ] as const;
 
 function packageVersion(): string {
@@ -191,6 +201,55 @@ export function createMsiCenterMcpServer(
     async (args) => {
       const input = dryRunProfileInputSchema.parse(args);
       return toolResult(await dryRunProfile(input.profile, providers));
+    }
+  );
+
+  server.registerTool(
+    "get_msi_center_state",
+    {
+      description:
+        "Read live MSI Center settings state (User Scenario, fan curves, GPU switch, Battery Master, AI Engine) from the registry. Decoded values carry confidence labels; raw values are included.",
+      inputSchema: emptyInputSchema
+    },
+    async () => toolResult(decodeMsiCenterState(await providers.msiCenter.getMsiCenterRaw()))
+  );
+
+  server.registerTool(
+    "get_battery_health",
+    {
+      description:
+        "Read battery health (design vs full-charge capacity, wear, latest charge state) from MSI's AI_Battery log.",
+      inputSchema: emptyInputSchema
+    },
+    async () => toolResult(await providers.batteryHealth.getBatteryHealth())
+  );
+
+  server.registerTool(
+    "explain_msi_setting",
+    {
+      description:
+        "Explain an MSI Center setting or machine-specific topic: what it does, how it works, values, tradeoffs, and per-workload recommendations.",
+      inputSchema: explainMsiSettingInputSchema
+    },
+    async (args) => {
+      const input = explainMsiSettingInputSchema.parse(args);
+      return toolResult({
+        entry: getKnowledgeEntry(input.topic) ?? null,
+        available_topics: listKnowledgeTopics()
+      });
+    }
+  );
+
+  server.registerTool(
+    "check_profile_readiness",
+    {
+      description:
+        "Check live machine state against a named profile's readiness rules (e.g. llm_training) and report pass/fail/unknown per rule with manual fix steps. Read-only.",
+      inputSchema: checkProfileReadinessInputSchema
+    },
+    async (args) => {
+      const input = checkProfileReadinessInputSchema.parse(args);
+      return toolResult(await checkProfileReadiness(input.profile as ProfileName, providers));
     }
   );
 

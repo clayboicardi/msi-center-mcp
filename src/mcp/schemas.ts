@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { KNOWLEDGE_TOPIC_IDS } from "../knowledge/msiKnowledge.js";
 import { PROFILE_NAMES } from "../profiles/profiles.js";
 
 export const emptyInputSchema = z.object({}).strict();
@@ -33,6 +34,18 @@ export const compareTelemetryLogsInputSchema = z
   .strict();
 
 export const dryRunProfileInputSchema = z
+  .object({
+    profile: z.enum(PROFILE_NAMES)
+  })
+  .strict();
+
+export const explainMsiSettingInputSchema = z
+  .object({
+    topic: z.enum(KNOWLEDGE_TOPIC_IDS as [string, ...string[]])
+  })
+  .strict();
+
+export const checkProfileReadinessInputSchema = z
   .object({
     profile: z.enum(PROFILE_NAMES)
   })

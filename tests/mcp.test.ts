@@ -49,6 +49,39 @@ describe("MCP server registration", () => {
 
       expect(JSON.parse(text).model).toContain("Vector");
       expect(result.structuredContent?.model).toContain("Vector");
+
+      const msiState = await client.callTool({
+        name: "get_msi_center_state",
+        arguments: {}
+      });
+      const msiStructured = msiState.structuredContent as {
+        available: boolean;
+        user_scenario: { raw: number; confidence: string };
+      };
+      expect(msiStructured.available).toBe(true);
+      expect(msiStructured.user_scenario.raw).toBe(1);
+
+      const readiness = await client.callTool({
+        name: "check_profile_readiness",
+        arguments: { profile: "llm_training" }
+      });
+      const readinessStructured = readiness.structuredContent as {
+        profile: string;
+        ready: boolean;
+        results: unknown[];
+      };
+      expect(readinessStructured.profile).toBe("llm_training");
+      expect(readinessStructured.ready).toBe(true);
+      expect(readinessStructured.results.length).toBeGreaterThan(3);
+
+      const knowledge = await client.callTool({
+        name: "explain_msi_setting",
+        arguments: { topic: "user_scenario" }
+      });
+      const knowledgeStructured = knowledge.structuredContent as {
+        entry: { id: string } | null;
+      };
+      expect(knowledgeStructured.entry?.id).toBe("user_scenario");
     } finally {
       await client.close();
       await mcp.server.close();
