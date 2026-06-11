@@ -1,5 +1,7 @@
 # Claude Code Handoff: MSI Center MCP v0.1
 
+> **HISTORICAL DOCUMENT (2026-06-10).** This describes Codex's v0.1 as handed off. Claude Code has since reviewed it, fixed the real-hardware bugs (CIM query 4x duplication, timeout detection, cwd-dependent logs dir), and shipped v0.2 with MSI Center registry insight, battery health, a knowledge base, and profile readiness checks. Current truth: README.md, SECURITY.md, AGENTS.md, docs/msi-center-knowledge.md, and the plan at docs/superpowers/plans/2026-06-10-msi-center-insight-v0.2.md.
+
 This document is context for a cold-start Claude Code session. It summarizes what Codex built in this repository, why it is shaped this way, what was verified, and where future work can begin.
 
 It is not intended to be an additional restriction layer for Claude Code. The current implementation has a deliberately read-only v0.1 product contract because that was the requested first build. If the user and Claude decide to expand beyond that contract, update the code, tests, README, SECURITY, and AGENTS files deliberately so the repository stays honest about what it does.

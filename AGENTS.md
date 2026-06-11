@@ -1,67 +1,34 @@
 # AGENTS.md
 
-This repository builds a low-risk local MCP server for Windows laptop performance telemetry.
+This repository is a read-only local MCP server giving Claude Code full insight into this MSI laptop: telemetry, Windows power state, live MSI Center settings, battery health, a settings knowledge base, and per-task readiness checks.
 
-## Primary client
+## History and ownership
 
-The finished MCP server is intended to be installed and used by Claude Code.
+- v0.1 was built by Codex under a deliberately restricted contract (`docs/claude-code-handoff.md`, historical).
+- v0.2 onward is maintained by Claude Code working with Clay. The Codex-era prohibitions on touching Claude Code configuration no longer apply: Clay approved wiring this server into Claude Code at user scope (2026-06-10).
 
-Codex is being used only to design, implement, test, and document the MCP server. Codex must not configure Claude Code or wire this MCP into any client.
+## Hard restrictions (still binding for any agent)
 
-## Hard restrictions
+Do not add, in any form:
 
-Do not:
+- Arbitrary command execution or arbitrary PowerShell execution.
+- Admin elevation (the elevated `root/WMI` MSI_ACPI interface was evaluated and rejected).
+- MSI Center writes, MSI Center SDK integration, EC/register access.
+- Fan-curve writes, voltage changes, CPU/GPU overclocking writes, NVIDIA tuning writes.
+- BIOS/firmware writes, registry writes (`reg.exe` stays query-only).
+- Unrestricted filesystem writes (logs stay inside the configured logs directory).
 
-- Run `claude mcp add`.
-- Run `/mcp`.
-- Modify `~/.claude`.
-- Modify `.claude`.
-- Modify `.mcp.json`.
-- Modify Claude Code settings.
-- Configure this MCP in Claude Code.
-- Add arbitrary command execution.
-- Add arbitrary PowerShell execution.
-- Add admin elevation.
-- Add MSI Center writes.
-- Add MSI Center SDK integration.
-- Add EC/register access.
-- Add fan-curve writes.
-- Add voltage changes.
-- Add CPU/GPU overclocking writes.
-- Add NVIDIA tuning writes.
-- Add MSI Afterburner writes.
-- Add BIOS or firmware writes.
-- Add registry writes.
-- Add unrestricted filesystem writes.
+Windows power-plan writes (`powercfg /setactive`) are the one candidate future write; it is NOT implemented and must pass the full SECURITY.md write checklist before it ever is.
 
-## v0.1 scope
+## Working in this repo
 
-v0.1 is read-only except for writing local telemetry logs.
-
-Allowed:
-
-- Read system info.
-- Read battery/AC status.
-- Read Windows power plan state.
-- Read NVIDIA GPU telemetry through read-only nvidia-smi queries.
-- Capture bounded JSONL telemetry logs.
-- Summarize logs.
-- Compare logs.
-- Dry-run named profiles.
-
-Not allowed:
-
-- Applying profiles.
-- Changing power plans.
-- Changing MSI Center settings.
-- Changing fans.
-- Changing GPU settings.
+- Every real subprocess goes through `src/core/commandRunner.ts` allowlists; new command surfaces need safety tests in `tests/core.safety.test.ts` proving rejection of write-shaped arguments.
+- Default tests must keep passing without MSI hardware, Windows-only tools, or MSI Center installed (fake providers in `src/adapters/fakeProviders.ts`).
+- Registry value semantics live in `src/knowledge/msiRegistryMap.ts` with confidence labels. Never present an `inferred` mapping as fact; calibrate live (flip the setting in MSI Center, diff `get_msi_center_state` raw values) and only then mark `verified_live`.
+- stdout is reserved for MCP protocol output; diagnostics go to stderr and the local debug log.
+- The performance invariant from the v0.2 refactor: one CIM / powercfg / nvidia-smi invocation per tool call. The CIM query costs seconds on real hardware — never reintroduce nested re-querying.
+- `node scripts/smoke-real.mjs` is the manual real-hardware check (read-only); run it after adapter changes when on the MSI laptop.
 
 ## Safety principles
 
-Use allowlisted adapters only.
-Use argument arrays, not shell string interpolation.
-Apply command timeouts.
-Gracefully degrade when sensors are unavailable.
-Keep tests passing.
-Prefer small, reviewable changes.
+Use allowlisted adapters only. Use argument arrays, never shell strings. Apply command timeouts. Degrade gracefully when a sensor or MSI Center is unavailable. Keep tests passing. Prefer small, reviewable changes.
