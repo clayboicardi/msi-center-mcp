@@ -142,9 +142,9 @@ export function createCommandRunner(options: { execFileImpl?: ExecFileImpl } = {
             // through killed/signal, never through a "TimeoutError" name.
             const timedOut = Boolean(
               execError &&
-                (execError.killed === true ||
-                  execError.signal === "SIGTERM" ||
-                  execError.code === "ETIMEDOUT")
+              (execError.killed === true ||
+                execError.signal === "SIGTERM" ||
+                execError.code === "ETIMEDOUT")
             );
             const stderrText = Buffer.isBuffer(stderr) ? stderr.toString("utf8") : stderr;
             const warnings: string[] = [];

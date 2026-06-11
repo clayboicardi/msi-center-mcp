@@ -1,3 +1,5 @@
+import { createRequire } from "node:module";
+
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 import { createConfig } from "../core/config.js";
@@ -37,6 +39,11 @@ export const TOOL_NAMES = [
   "dry_run_profile"
 ] as const;
 
+function packageVersion(): string {
+  const pkg = createRequire(import.meta.url)("../../package.json") as { version?: string };
+  return pkg.version ?? "0.0.0";
+}
+
 function toolResult(data: unknown) {
   const structuredContent = JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
 
@@ -68,7 +75,7 @@ export function createMsiCenterMcpServer(
   const config = options.config ?? createConfig();
   const server = new McpServer({
     name: "msi-center-mcp",
-    version: "0.1.0"
+    version: packageVersion()
   });
 
   for (const forbidden of FORBIDDEN_TOOL_NAMES) {

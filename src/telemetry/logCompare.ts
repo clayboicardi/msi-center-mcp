@@ -1,4 +1,5 @@
 import type { AppConfig } from "../core/config.js";
+import { mergeWarnings } from "../core/result.js";
 import type { TelemetryLogSummary } from "./types.js";
 import { summarizeTelemetryLog } from "./logSummary.js";
 
@@ -107,6 +108,6 @@ export async function compareTelemetryLogs(
       "Telemetry log comparisons depend on workload repeatability.",
       "Dry-run profile reasoning does not prove game or benchmark performance by itself."
     ],
-    warnings: [...baseline.warnings, ...comparison.warnings]
+    warnings: mergeWarnings(baseline.warnings, comparison.warnings)
   };
 }

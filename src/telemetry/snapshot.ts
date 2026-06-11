@@ -251,4 +251,3 @@ export async function captureTelemetryLog(
     warnings: mergeWarnings(summary.warnings, captureWarnings)
   };
 }
-
