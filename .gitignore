@@ -1,0 +1,9 @@
+node_modules/
+dist/
+coverage/
+.tmp-tests/
+.remember/
+logs/*.jsonl
+*.log
+
+!logs/.gitkeep

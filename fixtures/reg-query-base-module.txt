@@ -1,0 +1,138 @@
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module
+    Version    REG_SZ    1.0.2605.0601
+    Type    REG_DWORD    0x1
+    AppPlayer    REG_DWORD    0x0
+    ID    REG_DWORD    0x68
+    Initialized    REG_DWORD    0x3e9
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\0_Scenario
+    Performance    REG_DWORD    0x0
+    Fan    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\1_Scenario
+    Performance    REG_DWORD    0x0
+    Fan    REG_DWORD    0x1
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\2_Scenario
+    Performance    REG_DWORD    0x2
+    Fan    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\3_Scenario
+    Performance    REG_DWORD    0x2
+    Fan    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\4_Scenario
+    Performance    REG_DWORD    0x3
+    Fan    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\5_Scenario
+    Performance    REG_DWORD    0x1
+    Fan    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\GameData
+    GameON_Status    REG_DWORD    0x0
+    Nahimic    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\GeneralSetting
+    WinKey    REG_DWORD    0x1
+    OverWolf    REG_DWORD    0x0
+    MicVolume    REG_DWORD    0x0
+    LockKeyCode    REG_SZ    
+    Fan    REG_DWORD    0x2
+    USB    REG_DWORD    0x0
+    WhisperMode    REG_DWORD    0x0
+    WhisperModeEnable    REG_DWORD    0x0
+    USBsup    REG_DWORD    0x1
+    USBstatus    REG_DWORD    0x1
+    QC3    REG_DWORD    0x0
+    powerSurgeLevel    REG_DWORD    0x0
+    WinFn    REG_DWORD    0x0
+    TileSP    REG_DWORD    0x0
+    TileST    REG_DWORD    0x0
+    TileCH    REG_DWORD    0x0
+    GPUswitchSP    REG_DWORD    0x1
+    GPUswitchST    REG_DWORD    0x0
+    GPUswitchCH    REG_DWORD    0x6
+    GPUswitchUMA    REG_DWORD    0x1
+    GPUswitchDiscrete    REG_DWORD    0x1
+    BatteryBoostSP    REG_DWORD    0x0
+    BatteryBoostST    REG_DWORD    0x0
+    BatteryBoostLA    REG_DWORD    0x0
+    BatteryBoostCH    REG_DWORD    0x6
+    CenterRun    REG_DWORD    0x1
+    ACAChage    REG_DWORD    0x0
+    ACA_Level    REG_DWORD    0x0
+    ACA_Ini    REG_DWORD    0x0
+    KBBacklight    REG_DWORD    0x2
+    IsQuietMode    REG_DWORD    0x0
+    BatteryMode    REG_DWORD    0x1
+    CapsLock    REG_DWORD    0x1
+    PowerSaver    REG_DWORD    0x0
+    NahimicSet    REG_DWORD    0x0
+    USBrunOne    REG_DWORD    0x1
+    TouchPad    REG_DWORD    0x1
+    Nahimic    REG_DWORD    0x0
+    ChagneGC    REG_DWORD    0x0
+    OD    REG_DWORD    0x1
+    ONEMSI    REG_DWORD    0x11
+    GPU_Switch    REG_DWORD    0x0
+    GPU_Switch_Support    REG_DWORD    0x1
+    DisplayMonitorSupport    REG_DWORD    0x1
+    Taillight    REG_DWORD    0x2
+    MaxDisplayFrequency    REG_DWORD    0xf0
+    MinDisplayFrequency    REG_DWORD    0x3c
+    NahimicIndex    REG_DWORD    0x3e7
+    NahimicSupport    REG_DWORD    0x0
+    TrueColorSupport    REG_DWORD    0x2
+    CrosshairRun    REG_DWORD    0x0
+    NPU    REG_DWORD    0x1
+    SmartAuoOSD    REG_DWORD    0x1
+    SpNPU    REG_DWORD    0x0
+    TouchPadEnable    REG_DWORD    0x1
+    Warning    REG_DWORD    0x1
+    GPU_Switch_Supporttest    REG_SZ    Supported
+    powerLidAction    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\GeneralSetting\HDR
+    SessionChange    REG_DWORD    0x1
+    DisplayChange    REG_DWORD    0x0
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\Record
+    1a    REG_DWORD    0xe
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\Scenario
+    OC    REG_DWORD    0x15
+    IsSupOC    REG_DWORD    0x1
+    GPU_Core_Preset    REG_DWORD    0x0
+    User_GPU_Core    REG_DWORD    0x0
+    High_GPU_Core    REG_DWORD    0x0
+    GPU_Core_Maximum    REG_DWORD    0xc8
+    GPU_Core_Minimum    REG_DWORD    0x0
+    GPU_VRAM_Preset    REG_DWORD    0x0
+    GPU_VRAM_Minimum    REG_DWORD    0x0
+    GPU_VRAM_Maximum    REG_DWORD    0xc8
+    High_GPU_VRAM    REG_DWORD    0x0
+    User_GPU_VRAM    REG_DWORD    0x0
+    IsSupOCtest    REG_DWORD    0x3
+    Default_Temp    REG_SZ    0;55;62;69;75;81;0;50;55;60;65;70
+    Default_Fan    REG_SZ    38;44;50;58;64;86;38;44;50;58;64;86
+    User_Fan    REG_SZ    45;65;75;90;100;150;45;65;75;90;100;150
+    High_Fan    REG_SZ    38;44;50;58;64;86;38;44;50;58;64;86
+    ECversion    REG_SZ    15MMIMS1.10107282025 9:16:04
+    isPerKey    REG_DWORD    0x0
+    KeyBoard    REG_DWORD    0x82
+    OCrun    REG_DWORD    0x1
+    IsSupOC_Reset    REG_DWORD    0x1
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Base Module\User Scenario
+    OSD    REG_DWORD    0x5
+    Mystic    REG_DWORD    0x0
+    Intelligent    REG_DWORD    0x0
+    ACA_Test    REG_DWORD    0x0
+    OOBE    REG_DWORD    0x2
+    Mode    REG_DWORD    0x1
+    ACA_CH    REG_DWORD    0x4
+    ModeCH    REG_DWORD    0x1
+    isResume    REG_DWORD    0x2
+

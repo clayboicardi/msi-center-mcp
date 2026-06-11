@@ -1,0 +1,140 @@
+import type {
+  ActivePowerPlan,
+  BatteryStatus,
+  GpuSnapshot,
+  OsSnapshot,
+  PowerPlanList,
+  PowerStatus,
+  ProcessSummary,
+  SystemDetails
+} from "../telemetry/types.js";
+import type { TelemetryProviders } from "./sensorProvider.js";
+
+type PartialPowerStatus = Partial<Omit<PowerStatus, "provider_status" | "warnings">>;
+
+export interface FakeProviderOverrides {
+  power?: PartialPowerStatus;
+  gpu?: Partial<GpuSnapshot>;
+  system?: Partial<SystemDetails>;
+}
+
+const activePlan: ActivePowerPlan = {
+  guid: "381b4222-f694-41f0-9685-ff5bb260df2e",
+  name: "Balanced",
+  warnings: []
+};
+
+const plans: PowerPlanList = {
+  plans: [
+    {
+      guid: activePlan.guid ?? "",
+      name: "Balanced",
+      is_active: true
+    },
+    {
+      guid: "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
+      name: "High performance",
+      is_active: false
+    },
+    {
+      guid: "a1841308-3541-4fab-bc81-f71556f20b4a",
+      name: "Power saver",
+      is_active: false
+    }
+  ],
+  warnings: []
+};
+
+const systemDetails: SystemDetails = {
+  manufacturer: "Micro-Star International Co., Ltd.",
+  model: "Vector A16 HX A8WHG",
+  bios_version: "E15M1AMS.10D",
+  bios_date: "2026-03-01T00:00:00.000000+000",
+  os_name: "Microsoft Windows 11 Home",
+  os_version: "10.0.26100",
+  os_build: "26100",
+  cpu_name: "AMD Ryzen 9 8940HX",
+  cpu_core_count: 16,
+  cpu_logical_processor_count: 32,
+  gpu_names: ["NVIDIA GeForce RTX 5070 Ti Laptop GPU", "AMD Radeon Graphics"],
+  total_memory_bytes: 17_018_621_952
+};
+
+const batteryStatus: BatteryStatus = {
+  ac_power: true,
+  battery_present: true,
+  battery_percent: 82,
+  charging_status: "ac_power",
+  warnings: []
+};
+
+const gpuSnapshot: GpuSnapshot = {
+  available: true,
+  name: "NVIDIA GeForce RTX 5070 Ti Laptop GPU",
+  driver_version: "576.80",
+  temperature_gpu_c: 67,
+  utilization_gpu_percent: 91,
+  utilization_memory_percent: 42,
+  memory_total_mb: 12282,
+  memory_used_mb: 8192,
+  memory_free_mb: 4090,
+  power_draw_w: 104.52,
+  clocks_current_graphics_mhz: 2430,
+  clocks_current_memory_mhz: 8001,
+  pstate: "P0",
+  unavailable_fields: [],
+  warnings: []
+};
+
+const osSnapshot: OsSnapshot = {
+  platform: "win32",
+  arch: "x64",
+  release: "10.0.26100",
+  uptime_seconds: 3600,
+  cpu_load_percent: 32,
+  memory_total_bytes: 17_018_621_952,
+  memory_free_bytes: 6_000_000_000,
+  memory_used_bytes: 11_018_621_952
+};
+
+const processSummary: ProcessSummary = {
+  available: true,
+  processes: [
+    {
+      pid: 1000,
+      name: "Code.exe",
+      cpu_percent: 4,
+      memory_bytes: 500_000_000
+    }
+  ],
+  warnings: []
+};
+
+export function createFakeProviders(overrides: FakeProviderOverrides = {}): TelemetryProviders {
+  const mergedSystem = { ...systemDetails, ...overrides.system };
+  const mergedBattery = { ...batteryStatus, ...overrides.power };
+  const mergedGpu = { ...gpuSnapshot, ...overrides.gpu };
+
+  return {
+    powerPlans: {
+      isPowerCfgAvailable: async () => true,
+      listPlans: async () => plans,
+      getActivePlan: async () => activePlan
+    },
+    cim: {
+      isCimAvailable: async () => true,
+      getSystemDetails: async () => ({ system: mergedSystem, warnings: [] }),
+      getBatteryStatus: async () => mergedBattery
+    },
+    gpu: {
+      isNvidiaSmiAvailable: async () => true,
+      getGpuSnapshot: async () => mergedGpu
+    },
+    os: {
+      getOsSnapshot: () => osSnapshot
+    },
+    processes: {
+      getProcessSummary: async () => processSummary
+    }
+  };
+}

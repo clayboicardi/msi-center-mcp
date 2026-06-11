@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+logs/*.jsonl
+package-lock.json
+codex_msi_center_mcp_prompt.md
