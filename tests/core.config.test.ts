@@ -27,16 +27,15 @@ describe("config", () => {
   });
 
   test("logs directory does not follow process.cwd()", async () => {
-    const originalCwd = process.cwd();
     const temp = await mkdtemp(path.join(tmpdir(), "msi-center-mcp-cwd-"));
-    process.chdir(temp);
+    const cwdSpy = vi.spyOn(process, "cwd").mockReturnValue(temp);
 
     try {
       vi.resetModules();
       const freshConfig = await import("../src/core/config.js");
       expect(freshConfig.createConfig().logsDirectory).toBe(path.join(packageRoot, "logs"));
     } finally {
-      process.chdir(originalCwd);
+      cwdSpy.mockRestore();
     }
   });
 
