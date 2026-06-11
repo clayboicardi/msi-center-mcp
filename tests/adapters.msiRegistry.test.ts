@@ -93,4 +93,42 @@ describe("MSI Center registry provider", () => {
     expect(raw.keys).toEqual({});
     expect(raw.warnings.join(" ")).toContain("unavailable");
   });
+
+  test("silently skips allowlisted keys that don't exist on this machine family", async () => {
+    // Laptops have Base Module but not the desktop keys; desktops the inverse.
+    // A key that reg.exe reports as missing is expected cross-family noise,
+    // not a warning-worthy failure.
+    const runner: CommandRunner = {
+      run: async (_adapter, _executable, args) => {
+        const key = args[1] ?? "";
+        if (key.includes("Base Module")) {
+          return {
+            ok: false,
+            exitCode: 1,
+            stdout: "",
+            stderr: "ERROR: The system was unable to find the specified registry key or value.",
+            timedOut: false,
+            commandName: "reg-msi",
+            warnings: ["Command failed: reg.exe query ..."]
+          };
+        }
+
+        return {
+          ok: true,
+          exitCode: 0,
+          stdout: fixture,
+          stderr: "",
+          timedOut: false,
+          commandName: "reg-msi",
+          warnings: []
+        };
+      }
+    };
+
+    const provider = createMsiCenterRegistryProvider(runner);
+    const raw = await provider.getMsiCenterRaw();
+
+    expect(raw.available).toBe(true);
+    expect(raw.warnings).toEqual([]);
+  });
 });

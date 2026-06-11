@@ -20,6 +20,12 @@ export interface MsiCenterProvider {
   getMsiCenterRaw(): Promise<MsiCenterRawState>;
 }
 
+// reg.exe's message when a queried key does not exist (en-US text; on a
+// localized OS the worst case is warning noise, never a false failure).
+// Notebook and desktop MSI Center use different key families, so each
+// machine is expected to be missing the other family's keys.
+const MISSING_KEY_PATTERN = /unable to find the specified registry key/i;
+
 const KEY_LINE = /^HKEY_[A-Z_]+\\/;
 const VALUE_LINE = /^ {4}(.+?) {4}(REG_[A-Z_]+) {4}(.*)$/;
 const VALUE_LINE_NO_DATA = /^ {4}(.+?) {4}(REG_[A-Z_]+)\s*$/;
@@ -86,7 +92,9 @@ export function createMsiCenterRegistryProvider(
 
       for (const result of results) {
         if (!result.ok) {
-          warningSets.push(result.warnings.length > 0 ? result.warnings : ["reg query failed."]);
+          if (!MISSING_KEY_PATTERN.test(result.stderr)) {
+            warningSets.push(result.warnings.length > 0 ? result.warnings : ["reg query failed."]);
+          }
           continue;
         }
 

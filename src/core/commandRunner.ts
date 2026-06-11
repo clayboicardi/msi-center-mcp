@@ -6,11 +6,20 @@ import { SafetyError } from "./errors.js";
 
 export type CommandAdapter = "powercfg" | "nvidia-smi" | "powershell-cim" | "reg-msi";
 
-// The only registry keys this server may read. MSI Center's MSIAPService
-// persists its user-facing settings state under these HKLM paths.
+// The only registry keys this server may read. MSI Center persists its
+// user-facing settings state under these HKLM paths. Notebook builds use the
+// Base Module component family; desktop builds have no Base Module and keep
+// scenario/fan state under SyncData, Component\User Scenario, Setting and
+// Component\Graphics Fan Tool instead. Keys missing on the current family
+// degrade silently. Order matters: Base Module must stay first so its
+// "User Scenario" subkey wins suffix lookups in decode on notebooks.
 export const MSI_REG_KEYS = [
   "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module",
-  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\BaseInfo"
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\BaseInfo",
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\SyncData",
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\User Scenario",
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Setting",
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Graphics Fan Tool"
 ] as const;
 
 export interface CommandResult {

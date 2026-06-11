@@ -184,6 +184,59 @@ describe("safe command runner", () => {
     expect(calls).toHaveLength(MSI_REG_KEYS.length);
   });
 
+  test("allowlists the desktop MSI Center keys exactly", () => {
+    const expected = [
+      "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\SyncData",
+      "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\User Scenario",
+      "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Setting",
+      "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Graphics Fan Tool"
+    ];
+
+    for (const key of expected) {
+      expect(MSI_REG_KEYS).toContain(key);
+    }
+  });
+
+  test("rejects write- and export-shaped reg invocations against desktop keys", async () => {
+    const runner = createCommandRunner({
+      execFileImpl: (_file, _args, _options, callback) => {
+        callback(null, "", "");
+        return {} as never;
+      }
+    });
+    const syncDataKey = "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\SyncData";
+    const settingKey = "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Setting";
+
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["add", syncDataKey, "/v", "Mode_Scenario", "/d", "Silent"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(runner.run("reg-msi", "reg.exe", ["delete", settingKey, "/f"])).rejects.toThrow(
+      /Arguments are not allowed/
+    );
+    // reg export writes a file; reg import writes the registry — both stay out.
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["export", syncDataKey, "C:\\dump.reg"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(runner.run("reg-msi", "reg.exe", ["import", "C:\\dump.reg"])).rejects.toThrow(
+      /Arguments are not allowed/
+    );
+    // Parent keys of the allowlisted paths are not themselves allowlisted.
+    await expect(
+      runner.run("reg-msi", "reg.exe", [
+        "query",
+        "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center",
+        "/s"
+      ])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(
+      runner.run("reg-msi", "reg.exe", [
+        "query",
+        "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component",
+        "/s"
+      ])
+    ).rejects.toThrow(/Arguments are not allowed/);
+  });
+
   test("rejects reg writes and non-allowlisted reg keys", async () => {
     const runner = createCommandRunner({
       execFileImpl: (_file, _args, _options, callback) => {

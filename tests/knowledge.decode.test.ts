@@ -9,8 +9,18 @@ const fixture = readFileSync(
   "utf8"
 );
 
+const desktopFixture = readFileSync(
+  new URL("../fixtures/reg-query-desktop-b760m.txt", import.meta.url),
+  "utf8"
+);
+
 function rawStateFromFixture() {
   const parsed = parseRegQueryOutput(fixture);
+  return { available: true, keys: parsed.keys, warnings: parsed.warnings };
+}
+
+function rawDesktopStateFromFixture() {
+  const parsed = parseRegQueryOutput(desktopFixture);
   return { available: true, keys: parsed.keys, warnings: parsed.warnings };
 }
 
@@ -104,5 +114,105 @@ describe("MSI Center state decoding", () => {
     expect(parseFanCurve("1;2;3")).toBeNull();
     expect(parseFanCurve("a;b;c;d;e;f;g;h;i;j;k;l")).toBeNull();
     expect(parseFanCurve(null)).toBeNull();
+  });
+});
+
+describe("Desktop MSI Center state decoding (PRO B760M-VC WIFI)", () => {
+  test("matches the desktop profile from PlatformType + board model", () => {
+    const state = decodeMsiCenterState(rawDesktopStateFromFixture());
+
+    expect(state.machine_profile.id).toBe("msi-pro-b760m-vc-wifi");
+    expect(state.machine_profile.matched).toBe(true);
+    // Desktop component family: no Base Module, no EC version string.
+    expect(state.ec_version).toBeNull();
+    expect(state.base_module_version).toBeNull();
+  });
+
+  test("decodes the active scenario from the SyncData display-name string", () => {
+    const state = decodeMsiCenterState(rawDesktopStateFromFixture());
+
+    expect(state.user_scenario.raw).toBe("Extreme Performance");
+    expect(state.user_scenario.decoded).toBe("extreme_performance");
+    // Shipped at inferred until live-calibrated on the machine.
+    expect(state.user_scenario.confidence).toBe("inferred");
+  });
+
+  test("surfaces desktop fan state with raw values and honest confidence", () => {
+    const state = decodeMsiCenterState(rawDesktopStateFromFixture());
+    const desktop = state.desktop;
+
+    expect(desktop).not.toBeNull();
+    expect(desktop?.available_scenarios).toEqual([
+      "Extreme Performance",
+      "Balanced",
+      "Silent",
+      "Customize"
+    ]);
+
+    expect(desktop?.system_fans).toHaveLength(4);
+    const fan1 = desktop?.system_fans.find((fan) => fan.fan_key === "FAN1");
+    expect(fan1?.mode.raw).toBe(1);
+    expect(fan1?.mode.decoded).toBe("smart_fan");
+    expect(fan1?.mode.confidence).toBe("inferred");
+    expect(fan1?.duty_percent).toBe(100);
+    expect(fan1?.curve).toEqual([
+      { temp_c: 0, duty_percent: 20 },
+      { temp_c: 45, duty_percent: 35 },
+      { temp_c: 65, duty_percent: 70 },
+      { temp_c: 80, duty_percent: 100 }
+    ]);
+
+    const fan4 = desktop?.system_fans.find((fan) => fan.fan_key === "FAN4");
+    expect(fan4?.duty_percent).toBe(50);
+    expect(fan4?.curve).toBeNull();
+
+    expect(desktop?.gpu_sync_fan?.enabled_raw).toBe(1);
+    expect(desktop?.gpu_sync_fan?.mode_name).toBe("Performance");
+
+    // Zero Frozr int vocabulary is uncalibrated: raw exposed, decode unknown.
+    expect(desktop?.zero_frozr.raw).toBe(2);
+    expect(desktop?.zero_frozr.decoded).toBeNull();
+    expect(desktop?.zero_frozr.confidence).toBe("unknown");
+  });
+
+  test("laptop-only settings stay null/unknown on the desktop", () => {
+    const state = decodeMsiCenterState(rawDesktopStateFromFixture());
+
+    expect(state.gpu_switch.raw).toBeNull();
+    expect(state.battery_master_mode.raw).toBeNull();
+    expect(state.whisper_mode_enabled.raw).toBeNull();
+    expect(state.fan_curves.default_temp_c).toBeNull();
+    expect(state.scenario_presets).toHaveLength(0);
+  });
+
+  test("the laptop fixture has no desktop section", () => {
+    const state = decodeMsiCenterState(rawStateFromFixture());
+
+    expect(state.desktop).toBeNull();
+  });
+
+  test("unrecognized desktops fall back to generic but still decode scenario names", () => {
+    const state = decodeMsiCenterState({
+      available: true,
+      keys: {
+        "HKEY_LOCAL_MACHINE\\...\\MSI Center\\BaseInfo": { PlatformType: 4, Model: "9Z99" },
+        "HKEY_LOCAL_MACHINE\\...\\MSI Center\\SyncData": {
+          Mode_Scenario: "Silent",
+          Data_Scenario: "Extreme Performance,Balanced,Silent"
+        }
+      },
+      warnings: []
+    });
+
+    expect(state.machine_profile.id).toBe("generic-msi");
+    expect(state.machine_profile.matched).toBe(false);
+    expect(state.user_scenario.raw).toBe("Silent");
+    expect(state.user_scenario.decoded).toBe("silent");
+    expect(state.user_scenario.confidence).toBe("inferred");
+    expect(state.desktop?.available_scenarios).toEqual([
+      "Extreme Performance",
+      "Balanced",
+      "Silent"
+    ]);
   });
 });

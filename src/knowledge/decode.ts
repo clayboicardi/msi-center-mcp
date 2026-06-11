@@ -1,6 +1,6 @@
 import type { MsiCenterRawState, RegistryValues } from "../adapters/msiCenterRegistry.js";
-import type { MappingConfidence } from "./msiRegistryMap.js";
-import { decodeWithMapping } from "./msiRegistryMap.js";
+import type { MappingConfidence, StringValueMapping, ValueMapping } from "./msiRegistryMap.js";
+import { decodeWithMapping, decodeWithStringMapping } from "./msiRegistryMap.js";
 import { selectMachineProfile } from "./machineProfiles.js";
 
 export interface DecodedValue<T = string> {
@@ -19,6 +19,36 @@ export interface ScenarioPreset {
   index: number;
   performance: DecodedValue;
   fan: DecodedValue;
+}
+
+// Desktop MSI Center (component family without Base Module): per-fan state
+// under Setting\FANn — a mode int, a fixed duty, and (in smart mode) a
+// temperature/duty curve of up to ~4 points.
+export interface DesktopFanSetting {
+  fan_key: string;
+  mode: DecodedValue;
+  duty_percent: number | null;
+  curve: Array<{ temp_c: number; duty_percent: number }> | null;
+}
+
+export interface DesktopMsiCenterState {
+  // SyncData\Mode_Scenario / Data_Scenario (display-name strings).
+  scenario_name: string | null;
+  available_scenarios: string[] | null;
+  // Component\User Scenario\User Scenario internal vocabulary (differs from
+  // the display names; e.g. "Performance" while SyncData says
+  // "Extreme Performance").
+  internal_mode: string | null;
+  current_fan_mode: string | null;
+  system_fans: DesktopFanSetting[];
+  // Setting\GPU Sync Fan: the AI-Cooling-style "sync system fans to GPU
+  // temperature" feature.
+  gpu_sync_fan: {
+    enabled_raw: number | null;
+    mode_name: string | null;
+  } | null;
+  // Component\Graphics Fan Tool\ZeroFrozr (GPU zero-fan policy).
+  zero_frozr: DecodedValue;
 }
 
 export interface MsiCenterState {
@@ -41,6 +71,9 @@ export interface MsiCenterState {
     user_fan_percent: FanCurveBanks | null;
   };
   scenario_presets: ScenarioPreset[];
+  // Populated when the desktop component family is present; null on
+  // notebook-family machines.
+  desktop: DesktopMsiCenterState | null;
   raw_keys: Record<string, RegistryValues>;
   warnings: string[];
 }
@@ -79,6 +112,63 @@ export function parseFanCurve(value: string | number | null | undefined): FanCur
   };
 }
 
+function splitScenarioList(value: string | number | null | undefined): string[] | null {
+  const text = stringOrNull(value);
+  if (!text) {
+    return null;
+  }
+
+  const parts = text
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts : null;
+}
+
+// Setting\FANn smart-fan curves are flat Level_<i>_T / Level_<i>_D value
+// pairs (temperature °C / duty percent), present only in smart mode.
+function parseDesktopFanCurve(
+  values: RegistryValues
+): Array<{ temp_c: number; duty_percent: number }> | null {
+  const points: Array<{ temp_c: number; duty_percent: number }> = [];
+
+  for (let level = 1; level <= 10; level += 1) {
+    const temp = values[`Level_${level}_T`];
+    const duty = values[`Level_${level}_D`];
+    if (typeof temp !== "number" || typeof duty !== "number") {
+      break;
+    }
+
+    points.push({ temp_c: temp, duty_percent: duty });
+  }
+
+  return points.length > 0 ? points : null;
+}
+
+function decodeNumberOrUnknown(
+  raw: string | number | null | undefined,
+  mapping: ValueMapping | undefined,
+  fallbackNote: string
+): DecodedValue {
+  if (!mapping) {
+    return { raw: raw ?? null, decoded: null, confidence: "unknown", note: fallbackNote };
+  }
+
+  return decodeWithMapping(typeof raw === "number" ? raw : null, mapping);
+}
+
+function decodeStringOrUnknown(
+  raw: string | number | null | undefined,
+  mapping: StringValueMapping | undefined,
+  fallbackNote: string
+): DecodedValue {
+  if (!mapping) {
+    return { raw: raw ?? null, decoded: null, confidence: "unknown", note: fallbackNote };
+  }
+
+  return decodeWithStringMapping(raw, mapping);
+}
+
 function decodeBooleanFlag(
   raw: string | number | null | undefined,
   note: string
@@ -101,21 +191,24 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
   const scenario = findKey(raw, "Scenario");
   const general = findKey(raw, "GeneralSetting");
   const baseInfo = findKey(raw, "BaseInfo");
+  const syncData = findKey(raw, "SyncData");
 
   const ecVersion = stringOrNull(scenario?.ECversion);
+  const model = stringOrNull(baseInfo?.Model);
   const { profile, matched } = selectMachineProfile({
     ec_version: ecVersion,
-    platform_type: typeof baseInfo?.PlatformType === "number" ? baseInfo.PlatformType : null
+    platform_type: typeof baseInfo?.PlatformType === "number" ? baseInfo.PlatformType : null,
+    model
   });
   const mappings = profile.mappings;
 
-  if (raw.available && !userScenario) {
+  if (raw.available && !userScenario && !syncData) {
     warnings.push("User Scenario registry key was not found; MSI Center may have changed layout.");
   }
 
   if (raw.available && !matched) {
     warnings.push(
-      `No calibrated machine profile matched (EC: ${ecVersion ?? "unknown"}); decoding with the generic MSI profile at reduced confidence.`
+      `No calibrated machine profile matched (EC: ${ecVersion ?? "unknown"}, model: ${model ?? "unknown"}); decoding with the generic MSI profile at reduced confidence.`
     );
   }
 
@@ -139,6 +232,65 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
     });
   }
 
+  // Desktop component family (no Base Module).
+  const desktopUserScenario = findKey(raw, "User Scenario\\User Scenario");
+  const gpuSyncFan = findKey(raw, "Setting\\GPU Sync Fan");
+  const graphicsFanTool = findKey(raw, "Graphics Fan Tool");
+
+  const systemFans: DesktopFanSetting[] = [];
+  for (let index = 0; index <= 15; index += 1) {
+    const fan = findKey(raw, `Setting\\FAN${index}`);
+    if (!fan) {
+      continue;
+    }
+
+    systemFans.push({
+      fan_key: `FAN${index}`,
+      mode: decodeNumberOrUnknown(
+        fan.Mode,
+        mappings.desktopSystemFanMode,
+        "No desktop fan-mode mapping in this machine profile."
+      ),
+      duty_percent: typeof fan.Duty === "number" ? fan.Duty : null,
+      curve: parseDesktopFanCurve(fan)
+    });
+  }
+
+  const desktop: DesktopMsiCenterState | null =
+    syncData || systemFans.length > 0 || gpuSyncFan
+      ? {
+          scenario_name: stringOrNull(syncData?.Mode_Scenario),
+          available_scenarios: splitScenarioList(syncData?.Data_Scenario),
+          internal_mode: stringOrNull(desktopUserScenario?.RealMode),
+          current_fan_mode: stringOrNull(desktopUserScenario?.CurrentFanMode),
+          system_fans: systemFans,
+          gpu_sync_fan: gpuSyncFan
+            ? {
+                enabled_raw: typeof gpuSyncFan.Control === "number" ? gpuSyncFan.Control : null,
+                mode_name: stringOrNull(gpuSyncFan.Mode)
+              }
+            : null,
+          zero_frozr: decodeNumberOrUnknown(
+            graphicsFanTool?.ZeroFrozr,
+            mappings.desktopZeroFrozr,
+            "No Zero Frozr mapping in this machine profile."
+          )
+        }
+      : null;
+
+  // Notebooks store the scenario as a Base Module int; desktops as a
+  // display-name string. Prefer the int when present, fall back to the name.
+  const notebookScenarioMode = typeof userScenario?.Mode === "number" ? userScenario.Mode : null;
+  const desktopScenarioName = stringOrNull(syncData?.Mode_Scenario);
+  const userScenarioValue =
+    notebookScenarioMode === null && desktopScenarioName !== null
+      ? decodeStringOrUnknown(
+          desktopScenarioName,
+          mappings.desktopScenarioName,
+          "No desktop scenario-name mapping in this machine profile."
+        )
+      : decodeWithMapping(notebookScenarioMode, mappings.userScenarioMode);
+
   return {
     available: raw.available,
     machine_profile: {
@@ -148,10 +300,7 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
     },
     base_module_version: stringOrNull(baseModule?.Version),
     ec_version: ecVersion,
-    user_scenario: decodeWithMapping(
-      typeof userScenario?.Mode === "number" ? userScenario.Mode : null,
-      mappings.userScenarioMode
-    ),
+    user_scenario: userScenarioValue,
     ai_engine_enabled: decodeBooleanFlag(
       userScenario?.Intelligent,
       "User Scenario\\Intelligent: 1 when the AI/Smart Auto engine drives scenario switching."
@@ -174,6 +323,7 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
       user_fan_percent: parseFanCurve(scenario?.User_Fan)
     },
     scenario_presets: scenarioPresets,
+    desktop,
     raw_keys: raw.keys,
     warnings
   };

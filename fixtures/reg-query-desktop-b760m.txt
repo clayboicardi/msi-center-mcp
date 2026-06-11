@@ -1,0 +1,106 @@
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\BaseInfo
+    OS_MajorVersion    REG_DWORD    0xa
+    OS_MinorVersion    REG_DWORD    0x0
+    OS_BuildNumber    REG_DWORD    0x6658
+    Type3    REG_SZ    03
+    ProductName_T1    REG_SZ    GamingPC
+    ProductName_T2    REG_SZ    PRO B760M-VC WIFI BULK (MS-7D37)
+    MKT_8F    REG_SZ    
+    PCB_Ver_8F    REG_SZ    
+    IsParseBy8F    REG_DWORD    0x0
+    IsMIA    REG_DWORD    0x0
+    IsMSIBase    REG_DWORD    0x1
+    BIOS_Ver    REG_SZ    B.31
+    BIOS_BuildDate    REG_SZ    08/13/2024
+    BIOS_Brand    REG_SZ    American Megatrends International, LLC.
+    Manufacturer    REG_SZ    micro-star international co., ltd.
+    PlatformType    REG_DWORD    0x4
+    MKT    REG_SZ    PRO B760M-VC WIFI BULK
+    Model    REG_SZ    7D37
+    PCB_Ver    REG_SZ    2.0
+
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\SyncData
+    Data_Scenario    REG_SZ    Extreme Performance,Balanced,Silent,Customize
+    Mode_Scenario    REG_SZ    Extreme Performance
+
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\User Scenario
+    ByModule    REG_DWORD    0x1
+    Version    REG_SZ    3.2024.0711.01
+    ByCooling Wizard    REG_DWORD    0x1
+    ID    REG_DWORD    0x3eb
+    Initialized    REG_DWORD    0x1
+    AI Engine_StrProfile    REG_SZ    Gaming:Extreme Performance & Free Up Memory;Work:Extreme Performance;Meeting:Silent;Entertainment:Silent;Default:Balanced
+    DisplayString    REG_SZ    User Scenario
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\User Scenario\User Scenario
+    CoolingWizardMode    REG_DWORD    0x1
+    Mode    REG_SZ    Performance
+    EngineerMode    REG_SZ    None
+    RealMode    REG_SZ    Performance
+    CurrentFanMode    REG_SZ    Performance
+
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\FAN1
+    Mode    REG_DWORD    0x1
+    Duty    REG_DWORD    0x64
+    Level_1_T    REG_DWORD    0x0
+    Level_1_D    REG_DWORD    0x14
+    Level_2_T    REG_DWORD    0x2d
+    Level_2_D    REG_DWORD    0x23
+    Level_3_T    REG_DWORD    0x41
+    Level_3_D    REG_DWORD    0x46
+    Level_4_T    REG_DWORD    0x50
+    Level_4_D    REG_DWORD    0x64
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\FAN2
+    Mode    REG_DWORD    0x2
+    Duty    REG_DWORD    0x64
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\FAN4
+    Mode    REG_DWORD    0x2
+    Duty    REG_DWORD    0x32
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\FAN5
+    Mode    REG_DWORD    0x2
+    Duty    REG_DWORD    0x32
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\FastBoot
+    FastBoot_Support    REG_DWORD    0x2
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\GPU Sync Fan
+    Control    REG_DWORD    0x1
+    Mode    REG_SZ    Performance
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\GPU Sync Fan\Block
+    FanGroup    REG_SZ    0;1;
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\GPU Sync Fan\Block\CPU
+    Level_1_T    REG_SZ    85
+    Level_1_D    REG_SZ    25
+    Level_2_T    REG_SZ    95
+    Level_2_D    REG_SZ    35
+    Level_3_T    REG_SZ    100
+    Level_3_D    REG_SZ    50
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Setting\GPU Sync Fan\Block\GPU
+    Level_1_T    REG_SZ    60
+    Level_1_D    REG_SZ    30
+    Level_2_T    REG_SZ    70
+    Level_2_D    REG_SZ    50
+    Level_3_T    REG_SZ    75
+    Level_3_D    REG_SZ    65
+
+
+HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\MSI\MSI Center\Component\Graphics Fan Tool
+    ByCooling Wizard    REG_DWORD    0x1
+    Version    REG_SZ    2.0.0.05
+    AppVersion    REG_SZ    2.0.0.05
+    WorkDir    REG_SZ    C:\Program Files (x86)\MSI\MSI Center\Graphics Fan Tool
+    IsSupport_ZeroFrozr    REG_DWORD    0x1
+    ID    REG_DWORD    0x3f2
+    Initialized    REG_DWORD    0x1
+    ZeroFrozr    REG_DWORD    0x2
+

@@ -54,6 +54,29 @@ export const GENERIC_MSI_PROFILE: MachineProfile = {
       },
       confidence: "community",
       note: "MSI Battery Master tiers: Best for Mobility (~100%), Balanced (~70-80%), Best for Battery (~50-60%). Integer order matches MSI Center UI order; absent entirely on desktops."
+    },
+    desktopScenarioName: {
+      map: {
+        "extreme performance": "extreme_performance",
+        balanced: "balanced",
+        silent: "silent",
+        customize: "customize"
+      },
+      confidence: "inferred",
+      note: "Desktop MSI Center stores the active scenario as its display name in SyncData\\Mode_Scenario. Names observed on a PRO B760M-VC WIFI desktop; your build may expose different scenarios — SyncData\\Data_Scenario lists what exists."
+    },
+    desktopSystemFanMode: {
+      map: {
+        1: "smart_fan",
+        2: "manual"
+      },
+      confidence: "inferred",
+      note: "Setting\\FANn\\Mode hypothesis observed on a PRO B760M-VC WIFI desktop: 1=smart curve (Level_N_T/D points present), 2=manual fixed duty. Calibrate on your board before trusting."
+    },
+    desktopZeroFrozr: {
+      map: {},
+      confidence: "unknown",
+      note: "Component\\Graphics Fan Tool\\ZeroFrozr int vocabulary is uncalibrated on all known machines — toggle Zero Frozr in MSI Center and diff before trusting."
     }
   }
 };

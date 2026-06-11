@@ -97,8 +97,8 @@ export const DEFAULT_PROFILES: ProfileDefinition[] = [
         id: "quiet-scenario",
         severity: "recommended",
         field: "msi.user_scenario.decoded",
-        expect: { oneOf: ["eco_silent", "balanced"] },
-        description: "MSI User Scenario should be ECO-Silent (or Balanced) for low noise.",
+        expect: { oneOf: ["eco_silent", "silent", "balanced"] },
+        description: "MSI User Scenario should be ECO-Silent/Silent (or Balanced) for low noise.",
         manual_fix: SCENARIO_FIX
       }
     ]

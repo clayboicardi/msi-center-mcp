@@ -47,3 +47,33 @@ export function decodeWithMapping<T extends string>(
     note: mapping.note
   };
 }
+
+// Desktop MSI Center stores some state as display-name strings (e.g.
+// SyncData\Mode_Scenario = "Extreme Performance") rather than integers.
+// Map keys must be lowercase; lookups are case-insensitive on trimmed input.
+export interface StringValueMapping<T extends string = string> {
+  map: Record<string, T>;
+  confidence: MappingConfidence;
+  overrides?: Record<string, MappingConfidence>;
+  note: string;
+}
+
+export function decodeWithStringMapping<T extends string>(
+  raw: string | number | null | undefined,
+  mapping: StringValueMapping<T>
+): { raw: number | string | null; decoded: T | null; confidence: MappingConfidence; note: string } {
+  const rawValue = raw ?? null;
+  const lookup = typeof rawValue === "string" ? rawValue.trim().toLowerCase() : null;
+  const decoded = lookup !== null && lookup in mapping.map ? (mapping.map[lookup] ?? null) : null;
+  const confidence =
+    decoded === null
+      ? "unknown"
+      : ((lookup !== null ? mapping.overrides?.[lookup] : undefined) ?? mapping.confidence);
+
+  return {
+    raw: rawValue,
+    decoded,
+    confidence,
+    note: mapping.note
+  };
+}

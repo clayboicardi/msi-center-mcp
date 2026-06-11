@@ -1,5 +1,5 @@
 // Manual real-hardware smoke check (not part of the default test suite).
-// Run on the MSI laptop after `npm run build`:
+// Run on the MSI machine after `npm run build`:
 //   node scripts/smoke-real.mjs
 // Exercises the real adapters: reg.exe, powercfg, nvidia-smi, PowerShell CIM,
 // and the AI_Battery CSV. Read-only.
@@ -31,6 +31,7 @@ console.log(
         performance: preset.performance.decoded ?? preset.performance.raw,
         fan: preset.fan.decoded ?? preset.fan.raw
       })),
+      desktop: state.desktop,
       warnings: state.warnings
     },
     null,
