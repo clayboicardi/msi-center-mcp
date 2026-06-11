@@ -7,6 +7,10 @@ import type {
   PowerPlanList,
   ProcessSummary
 } from "../telemetry/types.js";
+import { createMsiBatteryLogProvider } from "./msiBatteryLog.js";
+import type { BatteryHealthProvider } from "./msiBatteryLog.js";
+import { createMsiCenterRegistryProvider } from "./msiCenterRegistry.js";
+import type { MsiCenterProvider } from "./msiCenterRegistry.js";
 import { createNvidiaSmiProvider } from "./nvidiaSmi.js";
 import { createNodeOsProvider } from "./nodeOs.js";
 import { createPowerCfgProvider } from "./powercfg.js";
@@ -40,6 +44,8 @@ export interface TelemetryProviders {
   gpu: GpuProvider;
   os: NodeOsProvider;
   processes: ProcessProvider;
+  msiCenter: MsiCenterProvider;
+  batteryHealth: BatteryHealthProvider;
 }
 
 export function createDefaultProviders(): TelemetryProviders {
@@ -50,6 +56,8 @@ export function createDefaultProviders(): TelemetryProviders {
     cim: createWindowsCimProvider(commandRunner),
     gpu: createNvidiaSmiProvider(commandRunner),
     os: createNodeOsProvider(),
-    processes: createProcessStatsProvider()
+    processes: createProcessStatsProvider(),
+    msiCenter: createMsiCenterRegistryProvider(commandRunner),
+    batteryHealth: createMsiBatteryLogProvider()
   };
 }

@@ -112,6 +112,40 @@ const processSummary: ProcessSummary = {
   warnings: []
 };
 
+const MSI_BASE = "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module";
+
+// Mirrors the values observed on the real Vector A16 HX (see
+// fixtures/reg-query-base-module.txt).
+const msiCenterKeys: Record<string, Record<string, string | number>> = {
+  [MSI_BASE]: { Version: "1.0.2605.0601" },
+  [`${MSI_BASE}\\User Scenario`]: { Mode: 1, Intelligent: 0 },
+  [`${MSI_BASE}\\Scenario`]: {
+    ECversion: "15MMIMS1.10107282025",
+    Default_Temp: "0;55;62;69;75;81;0;50;55;60;65;70",
+    Default_Fan: "38;44;50;58;64;86;38;44;50;58;64;86",
+    User_Fan: "45;65;75;90;100;150;45;65;75;90;100;150"
+  },
+  [`${MSI_BASE}\\GeneralSetting`]: { GPU_Switch: 0, BatteryMode: 1, WhisperMode: 0 },
+  [`${MSI_BASE}\\0_Scenario`]: { Performance: 0, Fan: 0 },
+  [`${MSI_BASE}\\1_Scenario`]: { Performance: 0, Fan: 1 },
+  [`${MSI_BASE}\\4_Scenario`]: { Performance: 3, Fan: 0 }
+};
+
+const batteryHealth = {
+  available: true,
+  designed_capacity_mwh: 87395,
+  full_charge_capacity_mwh: 84192,
+  wear_percent: 3.7,
+  latest: {
+    time: "2026/06/10 05:15:42",
+    ac_power: true as const,
+    charge_percent: 97
+  },
+  sample_count: 5,
+  log_path: "C:\\ProgramData\\MSI\\AI_Battery\\20266_log.csv",
+  warnings: []
+};
+
 export function createFakeProviders(overrides: FakeProviderOverrides = {}): TelemetryProviders {
   const mergedSystem = { ...systemDetails, ...overrides.system };
   const mergedBattery = { ...batteryStatus, ...overrides.power };
@@ -138,6 +172,16 @@ export function createFakeProviders(overrides: FakeProviderOverrides = {}): Tele
     },
     processes: {
       getProcessSummary: async () => processSummary
+    },
+    msiCenter: {
+      getMsiCenterRaw: async () => ({
+        available: true,
+        keys: msiCenterKeys,
+        warnings: []
+      })
+    },
+    batteryHealth: {
+      getBatteryHealth: async () => batteryHealth
     }
   };
 }

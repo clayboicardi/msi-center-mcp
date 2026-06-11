@@ -55,7 +55,8 @@ export function parseRegQueryOutput(stdout: string): ParsedRegistryKeys {
       const name = match[1] ?? "";
       const type = match[2] ?? "";
       const data = match[3] ?? "";
-      keys[currentKey][name] = parseRegistryData(type, data);
+      const target = (keys[currentKey] ??= {});
+      target[name] = parseRegistryData(type, data);
       continue;
     }
 

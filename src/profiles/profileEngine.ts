@@ -25,8 +25,8 @@ export async function dryRunProfile(
   ]);
   const blockedActions: string[] = [];
 
-  if (profile === "gaming_ac" && power.ac_power !== true) {
-    blockedActions.push("AC power is required before considering the gaming_ac profile.");
+  if ((profile === "gaming_ac" || profile === "llm_training") && power.ac_power !== true) {
+    blockedActions.push(`AC power is required before considering the ${profile} profile.`);
   }
 
   return {
