@@ -173,5 +173,5 @@
 ### Task C3: Wire into Claude Code (user scope)
 
 - [ ] `npm run build`; smoke: `node dist/index.js` over stdio stays silent on stdout.
-- [ ] `claude mcp add --scope user msi-center -- node C:\Users\clayboicardi\Projects\msi-center-mcp\dist\index.js`
+- [ ] `claude mcp add --scope user msi-center -- node <repo>\dist\index.js`
 - [ ] Verify via `claude mcp list`; call `get_msi_center_state` from a fresh session. Commit + session summary to engram.

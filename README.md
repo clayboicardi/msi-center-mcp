@@ -1,61 +1,82 @@
 # msi-center-mcp
 
-Read-only MCP server giving Claude Code full insight into this MSI Vector A16 HX A8WHG laptop: hardware telemetry, Windows power state, **live MSI Center settings**, battery health, a curated knowledge base of what every MSI setting does, and per-task readiness checks (e.g. "is this machine configured correctly to train a model right now?").
+A read-only [MCP](https://modelcontextprotocol.io) server that gives AI coding agents (Claude Code, or any MCP client) full insight into an MSI Windows machine: hardware telemetry, Windows power state, **live MSI Center settings decoded from the registry**, battery health, a curated knowledge base of what each MSI setting actually does, and per-task readiness checks — e.g. _"is this machine configured correctly to train a model right now?"_
 
-v0.1 was built by Codex (`docs/claude-code-handoff.md`, historical). v0.2 was reviewed, fixed, and extended by Claude Code with Clay.
+```text
+> check_profile_readiness {"profile": "llm_training"}
+ready: true — 8/8 rules pass
+  ✓ AC power            ✓ GPU present (nvidia-smi)
+  ✓ MSI User Scenario = Extreme Performance   ✓ Windows plan = High performance
+  ✓ GPU cool (43°C)     ✓ VRAM free            ✓ RAM headroom   ✓ AI Engine off
+```
 
-## What It Does
+## Why
 
-- Reads system, BIOS, OS, CPU, GPU, and memory information.
-- Reads AC/battery status, Windows power plans, and the active plan.
-- Reads NVIDIA telemetry through allowlisted `nvidia-smi` fields.
-- **Reads live MSI Center state from the registry**: User Scenario, scenario presets, fan curves, GPU switch (MSHybrid/Discrete), Battery Master charge mode, AI Engine, WhisperMode, EC firmware version — with per-value confidence labels (`verified_live` / `community` / `inferred` / `unknown`).
-- **Reads battery health** (design vs full-charge capacity, wear) from MSI's AI_Battery log.
-- **Explains MSI settings** (`explain_msi_setting`): what each does, how it works, tradeoffs, and per-workload recommendations — including machine-specific LLM guidance (12GB VRAM / 16GB RAM).
-- **Checks task readiness** (`check_profile_readiness`): evaluates live state against profiles like `llm_training` and reports pass/fail/unknown per rule with manual fix steps.
-- Captures bounded JSONL telemetry logs; summarizes and compares them.
+MSI Center is opaque: its settings live in an Embedded Controller behind an undocumented UI, and nothing on the Windows side documents what's actually configured. It turns out MSI Center's service mirrors its user-facing state to readable registry keys (`HKLM\SOFTWARE\WOW6432Node\MSI\MSI Center\...`) — no admin required, ~80 ms per read. This server decodes that state, explains it, and checks it against what your workload needs. It changes **nothing**: when something is misconfigured, it tells you exactly what to click in MSI Center or Windows.
 
-## What It Does Not Do
+## Calibration model (read this before trusting it)
 
-- It does not change anything: no Windows power plan writes, no MSI Center writes, no fan/clock/voltage/power-limit changes, no registry writes (registry access is `reg.exe query` only).
-- It does not expose arbitrary command or PowerShell execution.
-- It does not require admin privileges or runtime network access.
+Registry integers mean different things on different MSI machines. Decoded values carry a confidence label:
 
-When state is wrong for a task, the server tells you exactly what to change manually in MSI Center or Windows; it never changes it for you. This is a deliberate decision (2026-06-10) — see SECURITY.md for the checklist any future write feature must pass.
+- `verified_live` — observed on a calibrated machine (UI action diffed against the registry)
+- `community` — documented by community projects ([msi-ec](https://github.com/BeardOverflow/msi-ec), [MControlCenter](https://github.com/dmitry-s93/MControlCenter))
+- `inferred` — plausible hypothesis (UI ordering, single observation)
+- `unknown` — no mapping; readiness checks report **unknown, never a false failure**
+
+Machine profiles are selected at runtime from the EC firmware signature. Currently calibrated: **MSI Vector A16 HX A8WHG** (Ryzen 9 8940HX, RTX 5070 Ti Laptop 12GB, MSI Center 2.0.70). Everything else gets the generic profile at reduced confidence — still useful, honestly labeled. Calibrating your own machine takes ~10 minutes (see [docs/msi-center-knowledge.md](docs/msi-center-knowledge.md)); contributions of new machine profiles are welcome.
 
 ## MCP Tools (15)
 
-Telemetry: `get_system_info`, `get_power_status`, `list_power_plans`, `get_active_power_plan`, `get_gpu_snapshot`, `get_telemetry_snapshot`, `capture_telemetry_log`, `summarize_telemetry_log`, `compare_telemetry_logs`
+| Category    | Tools                                                                                                                                                                                                          |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Telemetry   | `get_system_info`, `get_power_status`, `list_power_plans`, `get_active_power_plan`, `get_gpu_snapshot`, `get_telemetry_snapshot`, `capture_telemetry_log`, `summarize_telemetry_log`, `compare_telemetry_logs` |
+| MSI insight | `get_msi_center_state`, `get_battery_health`, `explain_msi_setting`                                                                                                                                            |
+| Profiles    | `list_profiles`, `dry_run_profile`, `check_profile_readiness`                                                                                                                                                  |
 
-Profiles: `list_profiles`, `dry_run_profile`, `check_profile_readiness` (profiles: `balanced_daily`, `gaming_ac`, `quiet_work`, `battery_saver`, `cooldown`, `llm_inference`, `llm_training`)
+Profiles: `balanced_daily`, `gaming_ac`, `quiet_work`, `battery_saver`, `cooldown`, `llm_inference`, `llm_training`.
 
-MSI insight: `get_msi_center_state`, `get_battery_health`, `explain_msi_setting`
+Typical agent flows:
 
-### Typical Claude Code flows
-
-- "Are we set up to train?" → `check_profile_readiness {"profile": "llm_training"}` → follow `manual_fix` strings for any failed rule.
+- "Are we set up to train?" → `check_profile_readiness {"profile": "llm_training"}` → follow the `manual_fix` strings for any failed rule.
 - "What does Cooler Boost actually do?" → `explain_msi_setting {"topic": "fan_modes_cooler_boost"}`.
 - "Did switching scenarios help?" → `capture_telemetry_log` before/after → `compare_telemetry_logs`.
 
-## Performance Notes (real hardware)
+## Quick start
 
-- The PowerShell CIM query costs ~3-4s per invocation (powershell.exe spawn). Every snapshot-style tool runs it exactly once; `get_msi_center_state` (~80ms), `get_battery_health` (~2ms), and lean capture samples avoid it entirely.
-- `capture_telemetry_log` middle samples read only fast sources (nvidia-smi, Node OS, powercfg); the first and last samples are full (battery start/end). Captures emit a warning if sampling falls behind the requested interval.
-- Long captures block the tool call; keep `durationSeconds` well under your MCP client's tool timeout (30-60s is typical and sufficient).
+Requirements: Windows 11, Node.js 20+. Optional (each degrades gracefully): NVIDIA driver with `nvidia-smi` on PATH, MSI Center installed.
 
-## Confidence and Calibration
+```powershell
+git clone https://github.com/clayboicardi/msi-center-mcp.git
+cd msi-center-mcp
+npm install
+npm run build
+```
 
-Raw MSI registry values are decoded through mapping tables in `src/knowledge/msiRegistryMap.ts`. Each decoded value carries a confidence label; `unknown`-confidence values evaluate to `unknown` (never `fail`) in readiness checks. To calibrate: flip a setting in MSI Center, re-run `get_msi_center_state`, diff the raw values, update the mapping, and raise its confidence to `verified_live`.
+Wire into Claude Code (user scope = available in every session):
 
-## Requirements
+```powershell
+claude mcp add --scope user msi-center -- node <absolute-path-to-repo>\dist\index.js
+```
 
-- Windows 11 for the real adapters (tests run anywhere via fake providers).
-- Node.js 20+.
-- Optional: `nvidia-smi` on PATH, `powercfg`, PowerShell, MSI Center installed (each degrades gracefully with warnings).
+Any other MCP client: stdio transport, command `node <repo>\dist\index.js`.
+
+## What it does NOT do
+
+- No writes of any kind: no power plan changes, no MSI Center changes, no fan/clock/voltage changes, no registry writes (`reg.exe` is allowlisted to `query` on two fixed keys).
+- No arbitrary command or PowerShell execution — every subprocess goes through an allowlisted command runner (`execFile`, argument arrays, `shell: false`, timeouts), with safety tests asserting that write-shaped arguments are rejected.
+- No admin elevation (the elevated WMI/EC interface MSI Center itself uses was evaluated and rejected).
+- No network access at runtime.
+
+See [SECURITY.md](SECURITY.md) for the full threat model and the checklist any future write feature must pass.
+
+## Performance notes
+
+- The PowerShell CIM query costs ~3-4 s per invocation (powershell.exe spawn). Every snapshot-style tool runs it exactly once per call; `get_msi_center_state` (~80 ms) and `get_battery_health` (~2 ms) avoid it entirely.
+- `capture_telemetry_log` keeps middle samples lean (nvidia-smi + OS + powercfg only) so 1-2 s sampling intervals actually hold; first and last samples are full so battery drain is measurable. Keep `durationSeconds` under your MCP client's tool timeout (30-60 s is plenty).
 
 ## Configuration
 
-Defaults are read-only and need no setup. Environment overrides:
+Zero-config by default. Environment overrides:
 
 | Variable                                  | Default          | Meaning                              |
 | ----------------------------------------- | ---------------- | ------------------------------------ |
@@ -67,31 +88,14 @@ Defaults are read-only and need no setup. Environment overrides:
 ## Development
 
 ```powershell
-npm install
-npm run build
-npm test          # 75 tests, fake providers, no hardware needed
+npm test          # 76 tests, fake providers — no MSI hardware needed
 npm run lint
 npm run typecheck
 node scripts/smoke-real.mjs   # manual real-hardware smoke check (read-only)
 ```
 
-Run the stdio server manually: `npm run build && node dist/index.js` (stdout is reserved for MCP protocol; diagnostics go to stderr and `logs/server-debug.log`).
+Project docs: [docs/msi-center-knowledge.md](docs/msi-center-knowledge.md) (what the settings do + calibration guide), [AGENTS.md](AGENTS.md) (rules for AI agents working on this repo), [SECURITY.md](SECURITY.md). The repo's origin story — v0.1 scaffolded by OpenAI Codex, then reviewed, fixed, extended, and calibrated by Claude Code — is preserved in [docs/claude-code-handoff.md](docs/claude-code-handoff.md) (historical).
 
-## Claude Code Wiring
+## License
 
-```powershell
-claude mcp add --scope user msi-center -- node C:\Users\clayboicardi\Projects\msi-center-mcp\dist\index.js
-```
-
-User scope makes the tools available in every Claude Code session on this machine. After pulling changes, re-run `npm run build` — the registration points at `dist/`.
-
-## Safety Model
-
-All real command calls go through allowlisted adapters using `execFile` argument arrays with `shell: false`:
-
-- `powercfg /list`, `powercfg /getactivescheme`
-- `nvidia-smi --query-gpu=<allowlisted fields> --format=csv,noheader,nounits`
-- One fixed, read-only PowerShell CIM script (approved `Win32_*` classes only)
-- `reg.exe query` on exactly two MSI Center HKLM keys, `/s` only
-
-File reads outside the package: MSI's battery log directory (`C:\ProgramData\MSI\AI_Battery`), read-only. There is no generic command runner tool. See `SECURITY.md`.
+[MIT](LICENSE)

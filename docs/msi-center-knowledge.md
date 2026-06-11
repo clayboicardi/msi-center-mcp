@@ -36,6 +36,10 @@ Calibrated by Clay clicking through the UI while a registry watcher recorded eac
 
 Side effect verified live: **selecting ECO-Silent auto-enables `WhisperMode=1`** and it clears on leaving — `WhisperMode=1` usually just means "machine is in ECO-Silent".
 
+### Calibrating a new machine
+
+Mappings live in per-machine profiles (`src/knowledge/machines/`), selected at runtime by EC firmware prefix (`Scenario\ECversion`) — unrecognized machines run the generic profile at reduced confidence. To calibrate yours: (1) run `get_msi_center_state` and note your EC version and raw values; (2) click through each User Scenario in MSI Center while re-reading the state (or watch `HKLM\...\Base Module\User Scenario\Mode` directly) and record which integer each scenario writes; (3) copy `vectorA16Hx.ts` to a new profile file with your EC prefix in the matcher and your verified map; (4) register it in `machineProfiles.ts` and add a decode test. Same procedure for fan modes, GPU switch (needs reboots), and Battery Master tiers.
+
 ## The settings, in one paragraph each
 
 **User Scenario** is the master performance envelope: it programs the EC shift mode (CPU/GPU power limits + fan policy). This build has three: **Extreme Performance** (Mode=1) for sustained loads, **Balanced** (Mode=2) for daily, **ECO-Silent** (Mode=4) for quiet/battery (also auto-enables WhisperMode). The separate **MSI AI Engine** card (sets `Intelligent=1`) lets MSI pick automatically — avoid for reproducible ML runs since it can downshift mid-run. Each scenario's gear icon opens Advanced Settings: GPU clock offsets (Core/VRAM, currently 0/0) and Fan Speed.

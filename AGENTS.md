@@ -24,7 +24,7 @@ Windows power-plan writes (`powercfg /setactive`) are the one candidate future w
 
 - Every real subprocess goes through `src/core/commandRunner.ts` allowlists; new command surfaces need safety tests in `tests/core.safety.test.ts` proving rejection of write-shaped arguments.
 - Default tests must keep passing without MSI hardware, Windows-only tools, or MSI Center installed (fake providers in `src/adapters/fakeProviders.ts`).
-- Registry value semantics live in `src/knowledge/msiRegistryMap.ts` with confidence labels. Never present an `inferred` mapping as fact; calibrate live (flip the setting in MSI Center, diff `get_msi_center_state` raw values) and only then mark `verified_live`.
+- Registry value semantics live in per-machine profiles under `src/knowledge/machines/` (selected at runtime via EC firmware signature; shared types in `src/knowledge/msiRegistryMap.ts`). Never present an `inferred` mapping as fact; calibrate live (flip the setting in MSI Center, diff `get_msi_center_state` raw values) and only then mark `verified_live`. New machines get a new profile file, not edits to someone else's calibration.
 - stdout is reserved for MCP protocol output; diagnostics go to stderr and the local debug log.
 - The performance invariant from the v0.2 refactor: one CIM / powercfg / nvidia-smi invocation per tool call. The CIM query costs seconds on real hardware — never reintroduce nested re-querying.
 - `node scripts/smoke-real.mjs` is the manual real-hardware check (read-only); run it after adapter changes when on the MSI laptop.

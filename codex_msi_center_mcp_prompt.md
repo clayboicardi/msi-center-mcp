@@ -5,7 +5,7 @@ Read this entire file and execute it as your prompt for this session.
 You are Codex, working locally inside this project folder:
 
 ```text
-C:\Users\clayboicardi\Projects\msi-center-mcp
+<workspace>\msi-center-mcp
 ```
 
 Your job is to create a complete, well-structured repository for a **low-risk Windows 11 MCP server**. This MCP server will eventually be installed and used by **Claude Code**. You are only building the MCP server repository.
@@ -48,7 +48,7 @@ Claude Code configuration files include, but are not limited to:
 Assume you are running inside this project folder only:
 
 ```text
-C:\Users\clayboicardi\Projects\msi-center-mcp
+<workspace>\msi-center-mcp
 ```
 
 Treat this folder as the workspace boundary.
@@ -1102,7 +1102,7 @@ Before doing project work, report:
 7. Whether the active workspace root matches:
 
 ```text
-C:\Users\clayboicardi\Projects\msi-center-mcp
+<workspace>\msi-center-mcp
 ```
 
 Then ask for approval before any network command or dependency installation.
@@ -1110,7 +1110,7 @@ Then ask for approval before any network command or dependency installation.
 Do not proceed if the workspace root is not:
 
 ```text
-C:\Users\clayboicardi\Projects\msi-center-mcp
+<workspace>\msi-center-mcp
 ```
 
 Do not run `codex update`.

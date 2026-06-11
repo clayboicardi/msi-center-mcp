@@ -11,7 +11,7 @@ It is not intended to be an additional restriction layer for Claude Code. The cu
 Repository path:
 
 ```text
-C:\Users\clayboicardi\Projects\msi-center-mcp
+<workspace>\msi-center-mcp
 ```
 
 The original Codex prompt is preserved at:
