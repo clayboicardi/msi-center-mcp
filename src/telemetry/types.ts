@@ -117,6 +117,20 @@ export interface TelemetrySnapshot {
   unavailable_fields: string[];
 }
 
+// One JSONL line in a capture log. Middle samples stay lean (fast sources
+// only); the slow CIM-backed system/power blocks are captured on the first
+// and last samples so battery drain is still measurable across the run.
+export interface TelemetryLogRecord {
+  timestamp: string;
+  gpu: GpuSnapshot;
+  os: OsSnapshot;
+  active_power_plan: ActivePowerPlan;
+  system?: SystemInfo;
+  power?: PowerStatus;
+  processes?: ProcessSummary;
+  warnings: string[];
+}
+
 export interface StatSummary {
   min: number;
   avg: number;

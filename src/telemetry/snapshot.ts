@@ -12,6 +12,7 @@ import type {
   GpuSnapshot,
   PowerStatus,
   SystemInfo,
+  TelemetryLogRecord,
   TelemetryLogSummary,
   TelemetrySnapshot
 } from "./types.js";
@@ -162,6 +163,42 @@ function validateCaptureInput(
   return { durationSeconds, intervalSeconds, label, includeProcesses };
 }
 
+async function collectLogRecord(
+  providers: TelemetryProviders,
+  options: { full: boolean; includeProcesses: boolean }
+): Promise<TelemetryLogRecord> {
+  if (options.full) {
+    const snapshot = await getTelemetrySnapshot(providers, {
+      includeProcesses: options.includeProcesses
+    });
+
+    return {
+      timestamp: snapshot.timestamp,
+      gpu: snapshot.gpu,
+      os: snapshot.os,
+      active_power_plan: snapshot.active_power_plan,
+      system: snapshot.system,
+      power: snapshot.power,
+      ...(snapshot.processes ? { processes: snapshot.processes } : {}),
+      warnings: snapshot.warnings
+    };
+  }
+
+  const [activePlan, gpu] = await Promise.all([
+    providers.powerPlans.getActivePlan(),
+    providers.gpu.getGpuSnapshot()
+  ]);
+  const os = providers.os.getOsSnapshot();
+
+  return {
+    timestamp: "",
+    gpu,
+    os,
+    active_power_plan: activePlan,
+    warnings: mergeWarnings(activePlan.warnings, gpu.warnings)
+  };
+}
+
 export async function captureTelemetryLog(
   input: CaptureTelemetryLogInput,
   providers: TelemetryProviders,
@@ -175,17 +212,29 @@ export async function captureTelemetryLog(
   await ensureLogsDirectory(config);
   const logPath = buildTelemetryLogPath(config, normalized.label, startedAt);
   const sampleCount = Math.floor(normalized.durationSeconds / normalized.intervalSeconds) + 1;
-  const samples: TelemetrySnapshot[] = [];
+  const samples: TelemetryLogRecord[] = [];
+  const captureWarnings: string[] = [];
 
   for (let index = 0; index < sampleCount; index += 1) {
-    const sample = await getTelemetrySnapshot(providers, {
-      includeProcesses: normalized.includeProcesses
+    const isFirst = index === 0;
+    const isLast = index === sampleCount - 1;
+    const sampleStarted = now();
+    const record = await collectLogRecord(providers, {
+      full: isFirst || isLast,
+      includeProcesses: isFirst && normalized.includeProcesses
     });
-    sample.timestamp = now().toISOString();
-    samples.push(sample);
-    await appendFile(logPath, `${JSON.stringify(sample)}\n`, "utf8");
+    record.timestamp = sampleStarted.toISOString();
+    samples.push(record);
+    await appendFile(logPath, `${JSON.stringify(record)}\n`, "utf8");
 
-    if (index < sampleCount - 1) {
+    const collectionMs = now().getTime() - sampleStarted.getTime();
+    if (collectionMs > normalized.intervalSeconds * 1000) {
+      captureWarnings.push(
+        `Sampling fell behind: sample ${index + 1} took ${collectionMs}ms against a ${normalized.intervalSeconds}s interval.`
+      );
+    }
+
+    if (!isLast) {
       await sleep(normalized.intervalSeconds * 1000);
     }
   }
@@ -199,7 +248,7 @@ export async function captureTelemetryLog(
     started_at: startedAt.toISOString(),
     ended_at: endedAt.toISOString(),
     summary,
-    warnings: summary.warnings
+    warnings: mergeWarnings(summary.warnings, captureWarnings)
   };
 }
 

@@ -116,6 +116,49 @@ describe("telemetry log capture and analysis", () => {
     expect(JSON.parse(lines[0] ?? "{}").gpu.available).toBe(true);
   });
 
+  test("captures lean middle samples and full first/last samples", async () => {
+    const logsDirectory = await mkdtemp(path.join(tmpdir(), "msi-center-mcp-lean-"));
+    const config = { ...defaultConfig, logsDirectory };
+    const base = createFakeProviders();
+    let cimCalls = 0;
+    const providers = {
+      ...base,
+      cim: {
+        getCimSnapshot: async () => {
+          cimCalls += 1;
+          return base.cim.getCimSnapshot();
+        }
+      }
+    };
+    let tick = 0;
+
+    const result = await captureTelemetryLog(
+      { durationSeconds: 4, intervalSeconds: 1, includeProcesses: false },
+      providers,
+      config,
+      {
+        now: () => new Date(Date.UTC(2026, 5, 10, 20, 0, tick++)),
+        sleep: async () => undefined
+      }
+    );
+
+    expect(result.sample_count).toBe(5);
+    // The slow CIM source is only queried on the first and last samples.
+    expect(cimCalls).toBe(2);
+
+    const lines = (await readFile(result.log_path, "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
+
+    expect(lines[0]?.system).toBeDefined();
+    expect(lines[0]?.power).toBeDefined();
+    expect(lines[1]?.system).toBeUndefined();
+    expect(lines[1]?.power).toBeUndefined();
+    expect((lines[1]?.gpu as { available: boolean }).available).toBe(true);
+    expect(lines.at(-1)?.power).toBeDefined();
+  });
+
   test("summarizes sample fixture logs", async () => {
     const summary = await summarizeTelemetryLog(
       { logPath: fixturePath("sample-log-a.jsonl") },
