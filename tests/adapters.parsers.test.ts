@@ -7,7 +7,11 @@ import {
   createPowerCfgProvider
 } from "../src/adapters/powercfg.js";
 import { parseNvidiaSmiCsv, createNvidiaSmiProvider } from "../src/adapters/nvidiaSmi.js";
-import { createWindowsCimProvider, parseCimJson } from "../src/adapters/windowsCim.js";
+import {
+  createWindowsCimProvider,
+  normalizeCimDate,
+  parseCimJson
+} from "../src/adapters/windowsCim.js";
 import type { CommandRunner } from "../src/core/commandRunner.js";
 
 const fixture = (name: string) =>
@@ -51,6 +55,7 @@ describe("powercfg parsing", () => {
 
   test("parses powercfg /getactivescheme output", () => {
     expect(parseActivePowerScheme(fixture("powercfg-active.txt"))).toEqual({
+      available: true,
       guid: "381b4222-f694-41f0-9685-ff5bb260df2e",
       name: "Balanced",
       warnings: []
@@ -68,6 +73,7 @@ describe("powercfg parsing", () => {
     const provider = createPowerCfgProvider(runnerReturning("", false));
     const result = await provider.listPlans();
 
+    expect(result.available).toBe(false);
     expect(result.plans).toEqual([]);
     expect(result.warnings.join(" ")).toContain("command unavailable");
   });
@@ -105,24 +111,45 @@ describe("nvidia-smi parsing", () => {
 });
 
 describe("CIM parsing", () => {
-  test("parses structured CIM JSON", () => {
+  test("parses structured CIM JSON and normalizes real-machine quirks", () => {
     const parsed = parseCimJson(fixture("cim-system.json"));
 
+    expect(parsed.ok).toBe(true);
     expect(parsed.system.manufacturer).toContain("Micro-Star");
     expect(parsed.system.model).toContain("Vector");
-    expect(parsed.system.cpu_name).toBe("AMD Ryzen 9 8940HX");
+    // Real CIM output carries trailing whitespace on the CPU name.
+    expect(parsed.system.cpu_name).toBe("AMD Ryzen 9 8940HX with Radeon Graphics");
+    // Real PowerShell 5.1 serializes DateTime as /Date(ms)/.
+    expect(parsed.system.bios_date).toBe("2025-07-28T00:00:00.000Z");
     expect(parsed.system.gpu_names).toContain("NVIDIA GeForce RTX 5070 Ti Laptop GPU");
     expect(parsed.battery.battery_percent).toBe(82);
     expect(parsed.warnings).toEqual([]);
   });
 
+  test("normalizes CIM date formats", () => {
+    expect(normalizeCimDate("/Date(1753660800000)/")).toBe("2025-07-28T00:00:00.000Z");
+    expect(normalizeCimDate("20260301000000.000000+000")).toBe("2026-03-01T00:00:00Z");
+    expect(normalizeCimDate("  ")).toBeNull();
+    expect(normalizeCimDate(undefined)).toBeNull();
+    expect(normalizeCimDate("not a date")).toBe("not a date");
+  });
+
   test("reports CIM unavailable without hardware requirements", async () => {
     const provider = createWindowsCimProvider(runnerReturning("", false));
 
-    const system = await provider.getSystemDetails();
-    const battery = await provider.getBatteryStatus();
+    const snapshot = await provider.getCimSnapshot();
 
-    expect(system.warnings.join(" ")).toContain("command unavailable");
-    expect(battery.battery_present).toBe("unknown");
+    expect(snapshot.available).toBe(false);
+    expect(snapshot.warnings.join(" ")).toContain("command unavailable");
+    expect(snapshot.battery.battery_present).toBe("unknown");
+  });
+
+  test("reports invalid CIM JSON as unavailable with warnings", async () => {
+    const provider = createWindowsCimProvider(runnerReturning("not json"));
+
+    const snapshot = await provider.getCimSnapshot();
+
+    expect(snapshot.available).toBe(false);
+    expect(snapshot.warnings.join(" ")).toContain("not valid JSON");
   });
 });

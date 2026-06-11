@@ -86,10 +86,9 @@ const RULES: Record<CommandAdapter, CommandRule> = {
   "nvidia-smi": {
     executable: "nvidia-smi",
     validateArgs: (args) =>
-      (args.length === 1 && args[0] === "-L") ||
-      (args.length === 2 &&
-        args[0] === NVIDIA_QUERY_ARG &&
-        args[1] === "--format=csv,noheader,nounits")
+      args.length === 2 &&
+      args[0] === NVIDIA_QUERY_ARG &&
+      args[1] === "--format=csv,noheader,nounits"
   },
   "powershell-cim": {
     executable: "powershell.exe",

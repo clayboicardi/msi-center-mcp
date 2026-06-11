@@ -44,6 +44,41 @@ describe("telemetry composition", () => {
     expect(result.gpu.available).toBe(true);
     expect(result.processes).toBeUndefined();
   });
+
+  test("queries each provider exactly once per snapshot", async () => {
+    const base = createFakeProviders();
+    let cimCalls = 0;
+    let planCalls = 0;
+    let gpuCalls = 0;
+    const providers = {
+      ...base,
+      cim: {
+        getCimSnapshot: async () => {
+          cimCalls += 1;
+          return base.cim.getCimSnapshot();
+        }
+      },
+      powerPlans: {
+        ...base.powerPlans,
+        getActivePlan: async () => {
+          planCalls += 1;
+          return base.powerPlans.getActivePlan();
+        }
+      },
+      gpu: {
+        getGpuSnapshot: async () => {
+          gpuCalls += 1;
+          return base.gpu.getGpuSnapshot();
+        }
+      }
+    };
+
+    await getTelemetrySnapshot(providers, { includeProcesses: false });
+
+    expect(cimCalls).toBe(1);
+    expect(planCalls).toBe(1);
+    expect(gpuCalls).toBe(1);
+  });
 });
 
 describe("telemetry log capture and analysis", () => {

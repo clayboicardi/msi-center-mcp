@@ -8,6 +8,8 @@ import { mergeWarnings } from "../core/result.js";
 import type { TelemetryProviders } from "../adapters/sensorProvider.js";
 import type {
   ActivePowerPlan,
+  CimSnapshot,
+  GpuSnapshot,
   PowerStatus,
   SystemInfo,
   TelemetryLogSummary,
@@ -39,41 +41,64 @@ export interface CaptureOptions {
   sleep?: (milliseconds: number) => Promise<void>;
 }
 
-export async function getSystemInfo(providers: TelemetryProviders): Promise<SystemInfo> {
-  const [powercfgAvailable, nvidiaSmiAvailable, cimAvailable, systemDetails] = await Promise.all([
-    providers.powerPlans.isPowerCfgAvailable(),
-    providers.gpu.isNvidiaSmiAvailable(),
-    providers.cim.isCimAvailable(),
-    providers.cim.getSystemDetails()
+interface CoreReadings {
+  cim: CimSnapshot;
+  activePlan: ActivePowerPlan;
+  gpu: GpuSnapshot;
+}
+
+// Every reading below comes from exactly one subprocess per source. The real
+// CIM query costs seconds, so nothing in this module may trigger it twice for
+// a single tool call.
+async function readCore(providers: TelemetryProviders): Promise<CoreReadings> {
+  const [cim, activePlan, gpu] = await Promise.all([
+    providers.cim.getCimSnapshot(),
+    providers.powerPlans.getActivePlan(),
+    providers.gpu.getGpuSnapshot()
   ]);
 
+  return { cim, activePlan, gpu };
+}
+
+function composeSystemInfo(
+  cim: CimSnapshot,
+  activePlan: ActivePowerPlan,
+  gpu: GpuSnapshot
+): SystemInfo {
   return {
-    ...systemDetails.system,
-    powercfg_available: powercfgAvailable,
-    nvidia_smi_available: nvidiaSmiAvailable,
-    cim_available: cimAvailable,
-    warnings: systemDetails.warnings
+    ...cim.system,
+    powercfg_available: activePlan.available,
+    nvidia_smi_available: gpu.available,
+    cim_available: cim.available,
+    warnings: cim.warnings
   };
 }
 
-export async function getPowerStatus(providers: TelemetryProviders): Promise<PowerStatus> {
-  const [activePlan, battery, powercfgAvailable, cimAvailable] = await Promise.all([
-    providers.powerPlans.getActivePlan(),
-    providers.cim.getBatteryStatus(),
-    providers.powerPlans.isPowerCfgAvailable(),
-    providers.cim.isCimAvailable()
-  ]);
-
+function composePowerStatus(cim: CimSnapshot, activePlan: ActivePowerPlan): PowerStatus {
   return {
-    ...battery,
+    ...cim.battery,
     active_power_plan_guid: activePlan.guid,
     active_power_plan_name: activePlan.name,
     provider_status: {
-      powercfg_available: powercfgAvailable,
-      cim_available: cimAvailable
+      powercfg_available: activePlan.available,
+      cim_available: cim.available
     },
-    warnings: mergeWarnings(battery.warnings, activePlan.warnings)
+    warnings: mergeWarnings(cim.battery.warnings, activePlan.warnings)
   };
+}
+
+export async function getSystemInfo(providers: TelemetryProviders): Promise<SystemInfo> {
+  const { cim, activePlan, gpu } = await readCore(providers);
+  return composeSystemInfo(cim, activePlan, gpu);
+}
+
+export async function getPowerStatus(providers: TelemetryProviders): Promise<PowerStatus> {
+  const [cim, activePlan] = await Promise.all([
+    providers.cim.getCimSnapshot(),
+    providers.powerPlans.getActivePlan()
+  ]);
+
+  return composePowerStatus(cim, activePlan);
 }
 
 export async function getTelemetrySnapshot(
@@ -81,12 +106,10 @@ export async function getTelemetrySnapshot(
   input: TelemetrySnapshotInput = {}
 ): Promise<TelemetrySnapshot> {
   const includeProcesses = input.includeProcesses ?? false;
-  const [system, power, activePowerPlan, gpu] = await Promise.all([
-    getSystemInfo(providers),
-    getPowerStatus(providers),
-    providers.powerPlans.getActivePlan(),
-    providers.gpu.getGpuSnapshot()
-  ]);
+  const { cim, activePlan, gpu } = await readCore(providers);
+  const system = composeSystemInfo(cim, activePlan, gpu);
+  const power = composePowerStatus(cim, activePlan);
+  const activePowerPlan = activePlan;
   const os = providers.os.getOsSnapshot();
   const processes = includeProcesses
     ? await providers.processes.getProcessSummary(false)
@@ -180,10 +203,3 @@ export async function captureTelemetryLog(
   };
 }
 
-export function activePowerPlanFromStatus(power: PowerStatus): ActivePowerPlan {
-  return {
-    guid: power.active_power_plan_guid,
-    name: power.active_power_plan_name,
-    warnings: power.warnings
-  };
-}

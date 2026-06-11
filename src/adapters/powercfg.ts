@@ -18,6 +18,7 @@ export function parsePowerPlans(stdout: string): PowerPlanList {
     .filter((plan) => plan.guid && plan.name);
 
   return {
+    available: true,
     plans,
     warnings: plans.length === 0 ? ["No power plans could be parsed from powercfg output."] : []
   };
@@ -28,6 +29,7 @@ export function parseActivePowerScheme(stdout: string): ActivePowerPlan {
 
   if (!match) {
     return {
+      available: true,
       guid: null,
       name: null,
       warnings: ["No active power scheme could be parsed from powercfg output."]
@@ -35,6 +37,7 @@ export function parseActivePowerScheme(stdout: string): ActivePowerPlan {
   }
 
   return {
+    available: true,
     guid: match[1]?.toLowerCase() ?? null,
     name: match[2]?.trim() ?? null,
     warnings: []
@@ -46,15 +49,11 @@ export function createPowerCfgProvider(
   timeoutMs = defaultConfig.commandTimeoutMs
 ): PowerPlanProvider {
   return {
-    async isPowerCfgAvailable() {
-      const result = await runner.run("powercfg", "powercfg", ["/getactivescheme"], timeoutMs);
-      return result.ok;
-    },
-
     async listPlans() {
       const result = await runner.run("powercfg", "powercfg", ["/list"], timeoutMs);
       if (!result.ok) {
         return {
+          available: false,
           plans: [],
           warnings: result.warnings.length > 0 ? result.warnings : ["powercfg /list failed."]
         };
@@ -71,6 +70,7 @@ export function createPowerCfgProvider(
       const result = await runner.run("powercfg", "powercfg", ["/getactivescheme"], timeoutMs);
       if (!result.ok) {
         return {
+          available: false,
           guid: null,
           name: null,
           warnings:

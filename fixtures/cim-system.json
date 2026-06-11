@@ -4,17 +4,17 @@
     "Model": "Vector A16 HX A8WHG"
   },
   "BIOS": {
-    "SMBIOSBIOSVersion": "E15M1AMS.10D",
-    "ReleaseDate": "2026-03-01T00:00:00.000000+000"
+    "SMBIOSBIOSVersion": "E15MMAMS.104",
+    "ReleaseDate": "/Date(1753660800000)/"
   },
   "OperatingSystem": {
     "Caption": "Microsoft Windows 11 Home",
-    "Version": "10.0.26100",
-    "BuildNumber": "26100",
-    "TotalVisibleMemorySize": 16619748
+    "Version": "10.0.26200",
+    "BuildNumber": "26200",
+    "TotalVisibleMemorySize": 15911724
   },
   "Processor": {
-    "Name": "AMD Ryzen 9 8940HX",
+    "Name": "AMD Ryzen 9 8940HX with Radeon Graphics        ",
     "NumberOfCores": 16,
     "NumberOfLogicalProcessors": 32
   },
@@ -23,7 +23,7 @@
       "Name": "NVIDIA GeForce RTX 5070 Ti Laptop GPU"
     },
     {
-      "Name": "AMD Radeon Graphics"
+      "Name": "AMD Radeon(TM) 610M"
     }
   ],
   "Battery": {

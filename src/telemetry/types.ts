@@ -7,11 +7,13 @@ export interface PowerPlan {
 }
 
 export interface PowerPlanList {
+  available: boolean;
   plans: PowerPlan[];
   warnings: string[];
 }
 
 export interface ActivePowerPlan {
+  available: boolean;
   guid: string | null;
   name: string | null;
   warnings: string[];
@@ -22,6 +24,13 @@ export interface BatteryStatus {
   battery_present: UnknownBoolean;
   battery_percent: number | null;
   charging_status: string | null;
+  warnings: string[];
+}
+
+export interface CimSnapshot {
+  available: boolean;
+  system: SystemDetails;
+  battery: BatteryStatus;
   warnings: string[];
 }
 

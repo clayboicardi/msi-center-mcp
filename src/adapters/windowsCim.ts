@@ -2,7 +2,7 @@ import { POWERSHELL_CIM_QUERY } from "../core/commandRunner.js";
 import type { CommandRunner } from "../core/commandRunner.js";
 import { defaultConfig } from "../core/config.js";
 import { numberOrNull } from "../core/result.js";
-import type { BatteryStatus, SystemDetails } from "../telemetry/types.js";
+import type { BatteryStatus, CimSnapshot, SystemDetails } from "../telemetry/types.js";
 import type { CimProvider } from "./sensorProvider.js";
 
 interface CimJson {
@@ -47,6 +47,14 @@ const emptySystemDetails = (): SystemDetails => ({
   total_memory_bytes: null
 });
 
+const unknownBattery = (warnings: string[]): BatteryStatus => ({
+  ac_power: "unknown",
+  battery_present: "unknown",
+  battery_percent: null,
+  charging_status: null,
+  warnings
+});
+
 function statusText(status: number | null): string | null {
   switch (status) {
     case 1:
@@ -82,7 +90,42 @@ function batteryAcPower(status: number | null): boolean | "unknown" {
   return "unknown";
 }
 
+export function trimToNull(value: string | null | undefined): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  return trimmed ? trimmed : null;
+}
+
+const MS_JSON_DATE = /^\/Date\((-?\d+)\)\/$/;
+const DMTF_DATE = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.\d{6}[+-]\d{3}$/;
+
+export function normalizeCimDate(value: string | null | undefined): string | null {
+  const trimmed = trimToNull(value);
+  if (!trimmed) {
+    return null;
+  }
+
+  const msJson = MS_JSON_DATE.exec(trimmed);
+  if (msJson?.[1]) {
+    const millis = Number(msJson[1]);
+    return Number.isFinite(millis) ? new Date(millis).toISOString() : null;
+  }
+
+  const dmtf = DMTF_DATE.exec(trimmed);
+  if (dmtf) {
+    const [, year, month, day, hour, minute, second] = dmtf;
+    return `${year}-${month}-${day}T${hour}:${minute}:${second}Z`;
+  }
+
+  const parsed = Date.parse(trimmed);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : trimmed;
+}
+
 export function parseCimJson(stdout: string): {
+  ok: boolean;
   system: SystemDetails;
   battery: BatteryStatus;
   warnings: string[];
@@ -94,14 +137,9 @@ export function parseCimJson(stdout: string): {
     parsed = JSON.parse(stdout) as CimJson;
   } catch {
     return {
+      ok: false,
       system: emptySystemDetails(),
-      battery: {
-        ac_power: "unknown",
-        battery_present: "unknown",
-        battery_percent: null,
-        charging_status: null,
-        warnings: ["CIM output was not valid JSON."]
-      },
+      battery: unknownBattery(["CIM output was not valid JSON."]),
       warnings: ["CIM output was not valid JSON."]
     };
   }
@@ -116,18 +154,18 @@ export function parseCimJson(stdout: string): {
   const totalVisibleMemoryKb = numberOrNull(parsed.OperatingSystem?.TotalVisibleMemorySize);
 
   const system: SystemDetails = {
-    manufacturer: parsed.ComputerSystem?.Manufacturer ?? null,
-    model: parsed.ComputerSystem?.Model ?? null,
-    bios_version: parsed.BIOS?.SMBIOSBIOSVersion ?? null,
-    bios_date: parsed.BIOS?.ReleaseDate ?? null,
-    os_name: parsed.OperatingSystem?.Caption ?? null,
-    os_version: parsed.OperatingSystem?.Version ?? null,
-    os_build: parsed.OperatingSystem?.BuildNumber ?? null,
-    cpu_name: parsed.Processor?.Name ?? null,
+    manufacturer: trimToNull(parsed.ComputerSystem?.Manufacturer),
+    model: trimToNull(parsed.ComputerSystem?.Model),
+    bios_version: trimToNull(parsed.BIOS?.SMBIOSBIOSVersion),
+    bios_date: normalizeCimDate(parsed.BIOS?.ReleaseDate),
+    os_name: trimToNull(parsed.OperatingSystem?.Caption),
+    os_version: trimToNull(parsed.OperatingSystem?.Version),
+    os_build: trimToNull(parsed.OperatingSystem?.BuildNumber),
+    cpu_name: trimToNull(parsed.Processor?.Name),
     cpu_core_count: numberOrNull(parsed.Processor?.NumberOfCores),
     cpu_logical_processor_count: numberOrNull(parsed.Processor?.NumberOfLogicalProcessors),
     gpu_names: gpuControllers
-      .map((gpu) => gpu.Name)
+      .map((gpu) => trimToNull(gpu.Name))
       .filter((name): name is string => Boolean(name)),
     total_memory_bytes: totalVisibleMemoryKb === null ? null : totalVisibleMemoryKb * 1024
   };
@@ -144,60 +182,38 @@ export function parseCimJson(stdout: string): {
     warnings: parsed.Battery ? [] : ["Battery status is unavailable."]
   };
 
-  return { system, battery, warnings };
+  return { ok: true, system, battery, warnings };
 }
 
 export function createWindowsCimProvider(
   runner: CommandRunner,
   timeoutMs = defaultConfig.commandTimeoutMs
 ): CimProvider {
-  async function query() {
-    return runner.run(
-      "powershell-cim",
-      "powershell.exe",
-      ["-NoProfile", "-NonInteractive", "-Command", POWERSHELL_CIM_QUERY],
-      timeoutMs
-    );
-  }
-
   return {
-    async isCimAvailable() {
-      const result = await query();
-      return result.ok;
-    },
+    async getCimSnapshot(): Promise<CimSnapshot> {
+      const result = await runner.run(
+        "powershell-cim",
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-Command", POWERSHELL_CIM_QUERY],
+        timeoutMs
+      );
 
-    async getSystemDetails() {
-      const result = await query();
       if (!result.ok) {
+        const warnings = result.warnings.length > 0 ? result.warnings : ["CIM query failed."];
         return {
+          available: false,
           system: emptySystemDetails(),
-          warnings: result.warnings.length > 0 ? result.warnings : ["CIM query failed."]
+          battery: unknownBattery(warnings),
+          warnings
         };
       }
 
       const parsed = parseCimJson(result.stdout);
       return {
+        available: parsed.ok,
         system: parsed.system,
+        battery: parsed.battery,
         warnings: [...parsed.warnings, ...result.warnings]
-      };
-    },
-
-    async getBatteryStatus() {
-      const result = await query();
-      if (!result.ok) {
-        return {
-          ac_power: "unknown",
-          battery_present: "unknown",
-          battery_percent: null,
-          charging_status: null,
-          warnings: result.warnings.length > 0 ? result.warnings : ["CIM battery query failed."]
-        };
-      }
-
-      const parsed = parseCimJson(result.stdout);
-      return {
-        ...parsed.battery,
-        warnings: [...parsed.battery.warnings, ...result.warnings]
       };
     }
   };

@@ -1,12 +1,11 @@
 import { createCommandRunner } from "../core/commandRunner.js";
 import type {
   ActivePowerPlan,
-  BatteryStatus,
+  CimSnapshot,
   GpuSnapshot,
   OsSnapshot,
   PowerPlanList,
-  ProcessSummary,
-  SystemDetails
+  ProcessSummary
 } from "../telemetry/types.js";
 import { createNvidiaSmiProvider } from "./nvidiaSmi.js";
 import { createNodeOsProvider } from "./nodeOs.js";
@@ -15,19 +14,15 @@ import { createProcessStatsProvider } from "./processStats.js";
 import { createWindowsCimProvider } from "./windowsCim.js";
 
 export interface PowerPlanProvider {
-  isPowerCfgAvailable(): Promise<boolean>;
   listPlans(): Promise<PowerPlanList>;
   getActivePlan(): Promise<ActivePowerPlan>;
 }
 
 export interface CimProvider {
-  isCimAvailable(): Promise<boolean>;
-  getSystemDetails(): Promise<{ system: SystemDetails; warnings: string[] }>;
-  getBatteryStatus(): Promise<BatteryStatus>;
+  getCimSnapshot(): Promise<CimSnapshot>;
 }
 
 export interface GpuProvider {
-  isNvidiaSmiAvailable(): Promise<boolean>;
   getGpuSnapshot(): Promise<GpuSnapshot>;
 }
 

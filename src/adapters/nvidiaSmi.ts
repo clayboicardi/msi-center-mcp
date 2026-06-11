@@ -108,11 +108,6 @@ export function createNvidiaSmiProvider(
   timeoutMs = defaultConfig.commandTimeoutMs
 ): GpuProvider {
   return {
-    async isNvidiaSmiAvailable() {
-      const result = await runner.run("nvidia-smi", "nvidia-smi", ["-L"], timeoutMs);
-      return result.ok;
-    },
-
     async getGpuSnapshot() {
       const result = await runner.run(
         "nvidia-smi",

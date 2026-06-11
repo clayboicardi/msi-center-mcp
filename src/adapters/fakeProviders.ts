@@ -19,12 +19,14 @@ export interface FakeProviderOverrides {
 }
 
 const activePlan: ActivePowerPlan = {
+  available: true,
   guid: "381b4222-f694-41f0-9685-ff5bb260df2e",
   name: "Balanced",
   warnings: []
 };
 
 const plans: PowerPlanList = {
+  available: true,
   plans: [
     {
       guid: activePlan.guid ?? "",
@@ -117,17 +119,18 @@ export function createFakeProviders(overrides: FakeProviderOverrides = {}): Tele
 
   return {
     powerPlans: {
-      isPowerCfgAvailable: async () => true,
       listPlans: async () => plans,
       getActivePlan: async () => activePlan
     },
     cim: {
-      isCimAvailable: async () => true,
-      getSystemDetails: async () => ({ system: mergedSystem, warnings: [] }),
-      getBatteryStatus: async () => mergedBattery
+      getCimSnapshot: async () => ({
+        available: true,
+        system: mergedSystem,
+        battery: mergedBattery,
+        warnings: []
+      })
     },
     gpu: {
-      isNvidiaSmiAvailable: async () => true,
       getGpuSnapshot: async () => mergedGpu
     },
     os: {
