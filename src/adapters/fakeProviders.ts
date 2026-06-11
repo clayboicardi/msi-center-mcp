@@ -115,11 +115,13 @@ const processSummary: ProcessSummary = {
 const MSI_BASE =
   "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module";
 
-// Mirrors the values observed on the real Vector A16 HX (see
-// fixtures/reg-query-base-module.txt).
+// Mirrors the real Vector A16 HX layout (fixtures/reg-query-base-module.txt)
+// but pinned to Mode=2 (Balanced under the verified mapping) so profile tests
+// exercise both passing (balanced_daily) and failing (llm_training) scenario
+// rules.
 const msiCenterKeys: Record<string, Record<string, string | number>> = {
   [MSI_BASE]: { Version: "1.0.2605.0601" },
-  [`${MSI_BASE}\\User Scenario`]: { Mode: 1, Intelligent: 0 },
+  [`${MSI_BASE}\\User Scenario`]: { Mode: 2, Intelligent: 0 },
   [`${MSI_BASE}\\Scenario`]: {
     ECversion: "15MMIMS1.10107282025",
     Default_Temp: "0;55;62;69;75;81;0;50;55;60;65;70",

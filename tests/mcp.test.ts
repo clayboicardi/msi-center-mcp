@@ -59,7 +59,7 @@ describe("MCP server registration", () => {
         user_scenario: { raw: number; confidence: string };
       };
       expect(msiStructured.available).toBe(true);
-      expect(msiStructured.user_scenario.raw).toBe(1);
+      expect(msiStructured.user_scenario.raw).toBe(2);
 
       const readiness = await client.callTool({
         name: "check_profile_readiness",

@@ -22,9 +22,10 @@ describe("MSI Center state decoding", () => {
     expect(state.base_module_version).toBe("1.0.2605.0601");
     expect(state.ec_version).toContain("15MM");
 
+    // Calibrated live 2026-06-11: Mode=1 is Extreme Performance on this build.
     expect(state.user_scenario.raw).toBe(1);
-    // Uncalibrated mappings must surface as hypotheses, never as facts.
-    expect(["inferred", "community", "unknown"]).toContain(state.user_scenario.confidence);
+    expect(state.user_scenario.decoded).toBe("extreme_performance");
+    expect(state.user_scenario.confidence).toBe("verified_live");
 
     expect(state.ai_engine_enabled.decoded).toBe(false);
     expect(state.gpu_switch.raw).toBe(0);
@@ -48,8 +49,10 @@ describe("MSI Center state decoding", () => {
     expect(state.scenario_presets).toHaveLength(6);
     const turbo = state.scenario_presets.find((preset) => preset.performance.decoded === "turbo");
     expect(turbo?.index).toBe(4);
-    const silent = state.scenario_presets.find((preset) => preset.fan.decoded === "silent");
-    expect(silent?.index).toBe(1);
+    const coolerBoost = state.scenario_presets.find(
+      (preset) => preset.fan.decoded === "cooler_boost"
+    );
+    expect(coolerBoost?.index).toBe(1);
   });
 
   test("unknown raw values decode to null with unknown confidence", () => {

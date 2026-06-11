@@ -27,33 +27,34 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
     what_it_does:
       "Selects the laptop's overall performance envelope: CPU/GPU power limits, fan policy, and boost behavior. This is the single most impactful MSI Center setting for sustained workloads.",
     how_it_works:
-      "Each scenario programs the Embedded Controller (EC) with a shift mode. The Linux msi-ec driver names these eco/comfort/sport/turbo; MSI Center surfaces them as Super Battery, Silent/Balanced, and Extreme Performance. The EC then enforces CPU package power limits, GPU TGP / Dynamic Boost headroom, and the fan curve. MSIAPService persists the selection to HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module\\User Scenario\\Mode.",
+      "Each scenario programs the Embedded Controller (EC) with a shift mode that enforces CPU package power limits, GPU TGP / Dynamic Boost headroom, and the fan curve. MSIAPService persists the selection to HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module\\User Scenario\\Mode. This build exposes exactly three scenarios (verified live 2026-06-11): Extreme Performance (Mode=1), Balanced (Mode=2), ECO-Silent (Mode=4). Each scenario card has a gear icon opening Advanced Settings: a GPU tab (Core/VRAM clock offset sliders) and a Fan Speed tab (Auto / Cooler Boost / Advanced curve).",
     values: [
       {
         value: "extreme_performance",
         meaning:
-          "Maximum CPU/GPU power limits and aggressive fans; full GPU Dynamic Boost headroom. AC power strongly expected."
-      },
-      { value: "balanced", meaning: "Default daily mode; moderate power limits, auto fan." },
-      {
-        value: "silent",
-        meaning: "Caps power limits and fan speed for low noise; sustained clocks drop noticeably."
+          "Mode=1. Maximum CPU/GPU power limits; full GPU Dynamic Boost headroom. AC power strongly expected."
       },
       {
-        value: "super_battery",
-        meaning: "Eco shift mode; heavily capped CPU/GPU for battery runtime."
+        value: "balanced",
+        meaning: "Mode=2. Default daily mode; moderate power limits."
+      },
+      {
+        value: "eco_silent",
+        meaning:
+          "Mode=4. Efficiency/quiet scenario; caps power limits for noise and battery. Side effect (observed live): automatically enables NVIDIA WhisperMode while active and clears it on leaving."
       },
       {
         value: "ai_smart_auto",
         meaning:
-          "MSI AI Engine picks a scenario automatically based on detected activity. Switching is opaque; avoid for benchmarking or sustained ML runs."
+          "Separate MSI AI Engine card on the User Scenario page (sets User Scenario\\Intelligent=1, not a Mode value). Picks behavior automatically; avoid for benchmarking or sustained ML runs because it can downshift opaquely."
       }
     ],
     tradeoffs:
-      "Extreme Performance buys sustained clocks at the cost of noise and heat dumped into the chassis/desk. Silent can cut sustained GPU throughput 20-40% on long runs. AI/Smart Auto can silently downshift mid-run, which looks like mysterious throughput loss in training logs.",
+      "Extreme Performance buys sustained clocks at the cost of noise and heat dumped into the chassis/desk. ECO-Silent can cut sustained GPU throughput substantially on long runs. AI/Smart Auto can silently downshift mid-run, which looks like mysterious throughput loss in training logs.",
     interactions: [
       "Independent of the Windows power plan — both layers apply; set both deliberately.",
       "Cooler Boost overrides the scenario fan curve while enabled.",
+      "ECO-Silent auto-enables NVIDIA WhisperMode (verified live).",
       "gaming_ac/llm_training readiness rules expect Extreme Performance on AC."
     ],
     recommendations: [
@@ -66,24 +67,24 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
         advice:
           "Extreme Performance or Balanced; Balanced is fine for short interactive sessions and much quieter."
       },
-      { workload: "quiet_work", advice: "Silent; accept reduced sustained clocks." },
-      { workload: "battery", advice: "Super Battery and avoid GPU workloads entirely." }
+      { workload: "quiet_work", advice: "ECO-Silent; accept reduced sustained clocks." },
+      { workload: "battery", advice: "ECO-Silent and avoid GPU workloads entirely." }
     ],
     sources: [
+      "Live click-through calibration on this machine 2026-06-11 (Mode=1/2/4 verified)",
       "github.com/BeardOverflow/msi-ec (EC shift-mode register semantics)",
-      "github.com/dmitry-s93/MControlCenter (user-mode to EC shift-mode mapping)",
-      "Live registry observation on this machine (Base Module\\User Scenario)"
+      "github.com/dmitry-s93/MControlCenter (user-mode to EC shift-mode mapping)"
     ],
-    confidence: "community"
+    confidence: "verified_live"
   },
   {
     id: "fan_modes_cooler_boost",
     title: "Fan modes and Cooler Boost",
-    ui_path: "MSI Center > Features > User Scenario > fan icon / Cooler Boost",
+    ui_path: "MSI Center > Features > User Scenario > gear icon on the scenario card > Fan Speed",
     what_it_does:
-      "Controls the CPU and GPU fan curves: Auto (EC-managed), Silent (capped), Advanced (custom 6-point curve per fan), and Cooler Boost (both fans to maximum immediately).",
+      "Controls the CPU and GPU fan policy per scenario. This build offers exactly three modes: Auto (EC-managed curve), Cooler Boost (both fans to maximum immediately), and Advanced (custom 6-point curve per fan).",
     how_it_works:
-      "The EC holds two 6-point curves (CPU fan and GPU fan) mapping temperature thresholds to duty cycle. The registry mirrors them as 12 semicolon-joined integers (6 CPU + 6 GPU) in Base Module\\Scenario: Default_Temp (thresholds in C), Default_Fan and User_Fan (duty %). Values above 100 act as full-speed sentinels. Cooler Boost is a separate EC toggle that pins both fans at maximum (~60+ dBA) regardless of curve.",
+      "The EC holds two 6-point curves (Fan 1 = CPU, Fan 2 = GPU) mapping temperature thresholds to duty cycle. The registry mirrors them as 12 semicolon-joined integers (6 CPU + 6 GPU) in Base Module\\Scenario: Default_Temp (thresholds in C), Default_Fan (the Auto curve) and User_Fan (the Advanced curve, shown point-by-point in the UI — including values above 100, which act as full-speed sentinels). The selected mode lands in GeneralSetting\\Fan (2 = Advanced, verified live).",
     tradeoffs:
       "Aggressive curves lower temperatures (more boost headroom, less thermal aging) at the cost of noise. Cooler Boost is effective for sustained full-TGP runs but unpleasant to sit next to; custom Advanced curves are the middle ground.",
     interactions: [
@@ -98,30 +99,38 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
           "Auto curve under Extreme Performance is adequate; enable Cooler Boost for multi-hour saturated runs if noise is acceptable, or set an Advanced curve ~10% above Auto."
       },
       { workload: "llm_inference", advice: "Auto. Inference bursts rarely heat-soak the chassis." },
-      { workload: "quiet_work", advice: "Silent fan mode within the Silent scenario." }
+      {
+        workload: "quiet_work",
+        advice: "Use the ECO-Silent scenario; there is no separate silent fan mode on this build."
+      }
     ],
     sources: [
-      "Live registry observation (Scenario\\Default_Temp/Default_Fan/User_Fan)",
+      "Live UI observation 2026-06-11 (Advanced curve matches Scenario\\User_Fan exactly; Fan=2=Advanced verified)",
       "github.com/dmitry-s93/MControlCenter (fan mode vocabulary)"
     ],
-    confidence: "community"
+    confidence: "verified_live"
   },
   {
     id: "gpu_switch_mshybrid_discrete",
-    title: "GPU mode: MSHybrid vs Discrete",
-    ui_path: "MSI Center > Features > User Scenario > GPU switch (reboot required)",
+    title: "GPU mode: Discrete vs MSHybrid vs Integrated",
+    ui_path: "MSI Center > Features > User Scenario > GPU Switch bar (reboot required)",
     what_it_does:
-      "Chooses whether the internal display is driven through the AMD iGPU with the RTX as a render offload device (MSHybrid / Optimus), or wired directly to the RTX 5070 Ti (Discrete).",
+      "Three-way switch (Performance ↔ Battery Life) choosing how the internal display is driven: straight from the RTX 5070 Ti (Discrete), through the AMD iGPU with the RTX as render offload (MSHybrid / Optimus), or iGPU-only with the RTX disabled (Integrated).",
     how_it_works:
-      "MSHybrid routes the dGPU's output through the iGPU framebuffer, letting the dGPU power-gate to near 0W when idle. Discrete mode connects the panel mux straight to the dGPU, eliminating the copy hop (slightly lower display latency, required for some G-Sync paths) but keeping the dGPU always powered. Stored at GeneralSetting\\GPU_Switch; changing it requires a reboot.",
+      "MSHybrid routes the dGPU's output through the iGPU framebuffer, letting the dGPU power-gate to near 0W when idle. Discrete connects the panel mux straight to the dGPU (slightly lower display latency, always powered). Integrated turns the dGPU off entirely — CUDA disappears until you switch back. Stored at GeneralSetting\\GPU_Switch (0=MSHybrid verified live); changing requires a reboot.",
     values: [
       {
         value: "mshybrid",
-        meaning: "iGPU drives the panel; dGPU powers up on demand. Best battery life."
+        meaning:
+          "iGPU drives the panel; dGPU powers up on demand. Best balance — full CUDA with good battery."
       },
       {
         value: "discrete",
         meaning: "dGPU drives the panel directly. Best display latency; worst idle battery."
+      },
+      {
+        value: "integrated",
+        meaning: "dGPU fully off. Maximum battery; NO CUDA — never use for LLM work."
       }
     ],
     tradeoffs:
@@ -202,7 +211,7 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "Only relevant to real-time rendering. It does nothing useful for compute workloads and would only mask GPU throughput if a future driver applied limits broadly — keep it off on this machine.",
     interactions: [
       "Gaming-only feature; orthogonal to CUDA compute.",
-      "Off (0) on this machine as observed."
+      "The ECO-Silent scenario auto-enables WhisperMode while active and clears it on leaving (verified live 2026-06-11) — seeing WhisperMode=1 usually just means the machine is in ECO-Silent."
     ],
     recommendations: [
       { workload: "llm_training", advice: "Off." },

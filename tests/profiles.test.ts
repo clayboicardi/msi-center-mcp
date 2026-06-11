@@ -62,7 +62,7 @@ describe("profile readiness", () => {
     expect(result.ready).toBe(true);
     expect(result.required_failures).toBe(0);
 
-    // Fake state: scenario Mode=1 (balanced hypothesis), GPU 67C with 8GB VRAM used.
+    // Fake state: scenario Mode=2 (Balanced, verified mapping), GPU 67C with 8GB VRAM used.
     const scenario = result.results.find((entry) => entry.rule_id === "llm-train-scenario");
     expect(scenario?.status).toBe("fail");
     expect(scenario?.manual_fix).toContain("MSI Center");

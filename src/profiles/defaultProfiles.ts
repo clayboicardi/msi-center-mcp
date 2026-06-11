@@ -88,8 +88,8 @@ export const DEFAULT_PROFILES: ProfileDefinition[] = [
     name: "quiet_work",
     description: "Lower-noise work profile for light productivity.",
     intended_future_actions: [
-      "Windows power plan: Balanced or Power Saver.",
-      "MSI Center mode: Silent, manual only.",
+      "Windows power plan: Balanced.",
+      "MSI Center mode: ECO-Silent, manual only.",
       "GPU mode: MSHybrid, manual/reboot only."
     ],
     readiness_rules: [
@@ -97,8 +97,8 @@ export const DEFAULT_PROFILES: ProfileDefinition[] = [
         id: "quiet-scenario",
         severity: "recommended",
         field: "msi.user_scenario.decoded",
-        expect: { oneOf: ["silent", "balanced"] },
-        description: "MSI User Scenario should be Silent (or Balanced) for low noise.",
+        expect: { oneOf: ["eco_silent", "balanced"] },
+        description: "MSI User Scenario should be ECO-Silent (or Balanced) for low noise.",
         manual_fix: SCENARIO_FIX
       }
     ]
@@ -108,8 +108,8 @@ export const DEFAULT_PROFILES: ProfileDefinition[] = [
     description: "Battery-focused profile for unplugged use.",
     intended_future_actions: [
       "Prefer unplugged/battery use.",
-      "Windows power plan: Power Saver if available.",
-      "MSI Center mode: Super Battery, manual only.",
+      "Windows power plan: Balanced (no Power Saver plan on this machine).",
+      "MSI Center mode: ECO-Silent, manual only.",
       "GPU mode: MSHybrid/integrated if available, manual/reboot only.",
       "Refresh rate reduction may be suggested manually, not applied."
     ],
@@ -118,8 +118,8 @@ export const DEFAULT_PROFILES: ProfileDefinition[] = [
         id: "battery-scenario",
         severity: "recommended",
         field: "msi.user_scenario.decoded",
-        expect: { equals: "super_battery" },
-        description: "MSI User Scenario should be Super Battery when maximizing runtime.",
+        expect: { equals: "eco_silent" },
+        description: "MSI User Scenario should be ECO-Silent when maximizing runtime.",
         manual_fix: SCENARIO_FIX
       },
       {

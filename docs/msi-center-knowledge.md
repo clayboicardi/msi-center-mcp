@@ -22,25 +22,27 @@ Reads cost ~80ms and need no elevation. The WMI `root/WMI` MSI_ACPI interface (w
 
 Battery capacity history: `C:\ProgramData\MSI\AI_Battery\*_log.csv` (DesignedCapacity vs FullChargedCapacity = wear).
 
-## Calibration state (update after each calibration session)
+## Calibration state (live calibration completed 2026-06-11)
 
-| Raw value                    | Current mapping hypothesis                                          | Confidence                         | How to verify                                                    |
-| ---------------------------- | ------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------- |
-| `User Scenario\Mode`         | 0=Extreme Perf, 1=Balanced, 2=Silent, 3=Super Battery, 4=Smart Auto | **inferred**                       | Flip each scenario in MSI Center, re-read `get_msi_center_state` |
-| `N_Scenario\Performance`     | 0=comfort 1=eco 2=sport 3=turbo (EC shift modes)                    | community (msi-ec, MControlCenter) | Cross-check after Mode calibration                               |
-| `N_Scenario\Fan`             | 0=auto 1=silent 2=advanced                                          | inferred                           | Change fan mode, diff                                            |
-| `GeneralSetting\GPU_Switch`  | 0=MSHybrid 1=Discrete                                               | inferred                           | Switch GPU mode (reboot), diff                                   |
-| `GeneralSetting\BatteryMode` | 0=100% 1=~80% 2=~60%                                                | community                          | Flip Battery Master tier, diff                                   |
+Calibrated by Clay clicking through the UI while a registry watcher recorded each write (screenshots + watch log in session history).
 
-Observed presets on this machine: `0:(comfort,auto) 1:(comfort,silent) 2,3:(sport,auto) 4:(turbo,auto) 5:(eco,auto)` — consistent with Balanced / Silent / two game-or-creator modes / Extreme Performance / Super Battery, which supports (but does not prove) the Mode hypothesis.
+| Raw value                    | Mapping                                             | Confidence                                     | Notes                                                                                       |
+| ---------------------------- | --------------------------------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `User Scenario\Mode`         | **1=Extreme Performance, 2=Balanced, 4=ECO-Silent** | **verified_live**                              | This build has exactly these 3 scenarios; 0/3 unobserved (likely AI/Silent slots elsewhere) |
+| `GeneralSetting\Fan`         | 0=auto, 1=cooler_boost, 2=advanced                  | 2 verified_live; 0/1 inferred from UI order    | UI offers Auto / Cooler Boost / Advanced per scenario                                       |
+| `GeneralSetting\GPU_Switch`  | 0=MSHybrid, 1=Discrete, 2=Integrated                | 0 verified_live; others inferred               | 3-way bar on the User Scenario page; verifying 1/2 needs reboots — skipped                  |
+| `GeneralSetting\BatteryMode` | 0=100% 1=~80% 2=~60%                                | community                                      | Flip Battery Master tier to verify (optional)                                               |
+| `N_Scenario\Performance/Fan` | EC shift vocab (0=comfort 1=eco 2=sport 3=turbo)    | community; **row↔scenario mapping UNVERIFIED** | Verified Mode ints (1/2/4) don't line up with row indices — treat rows as informational     |
+
+Side effect verified live: **selecting ECO-Silent auto-enables `WhisperMode=1`** and it clears on leaving — `WhisperMode=1` usually just means "machine is in ECO-Silent".
 
 ## The settings, in one paragraph each
 
-**User Scenario** is the master performance envelope: it programs the EC shift mode (CPU/GPU power limits + fan policy). Extreme Performance for sustained loads, Balanced for daily, Silent caps clocks for quiet, Super Battery for runtime, Smart Auto lets MSI's AI pick (avoid for reproducible ML runs — it can downshift mid-run).
+**User Scenario** is the master performance envelope: it programs the EC shift mode (CPU/GPU power limits + fan policy). This build has three: **Extreme Performance** (Mode=1) for sustained loads, **Balanced** (Mode=2) for daily, **ECO-Silent** (Mode=4) for quiet/battery (also auto-enables WhisperMode). The separate **MSI AI Engine** card (sets `Intelligent=1`) lets MSI pick automatically — avoid for reproducible ML runs since it can downshift mid-run. Each scenario's gear icon opens Advanced Settings: GPU clock offsets (Core/VRAM, currently 0/0) and Fan Speed.
 
-**Fan modes / Cooler Boost**: per-scenario 6-point fan curves for CPU and GPU fans; Cooler Boost pins both fans at max. Sustained 75-83°C GPU under load is normal; ~87°C is throttle.
+**Fan modes / Cooler Boost**: per-scenario via the gear icon: Auto (EC curve), Cooler Boost (max fans), Advanced (custom 6-point curve per fan — the UI points are literally the registry `User_Fan` string, including the 150% full-speed sentinel). Sustained 75-83°C GPU under load is normal; ~87°C is throttle.
 
-**GPU switch (MSHybrid/Discrete)**: panel routing only — CUDA compute is unaffected. Discrete helps gaming display latency; MSHybrid saves 10-20W idle. Reboot required; never worth it for LLM work.
+**GPU switch (Discrete/MSHybrid/Integrated)**: panel routing only — CUDA compute is unaffected by Discrete vs MSHybrid. Integrated turns the dGPU off entirely (no CUDA — never for LLM work). Discrete helps gaming display latency; MSHybrid saves 10-20W idle. Reboot required.
 
 **Battery Master**: charge threshold (100/80/60%-class tiers). Pure longevity policy, zero performance impact. This battery currently reports full-charge capacity ≥ design capacity (effectively 0% wear).
 
