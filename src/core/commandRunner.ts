@@ -4,7 +4,14 @@ import type { ExecFileOptions } from "node:child_process";
 import { defaultConfig } from "./config.js";
 import { SafetyError } from "./errors.js";
 
-export type CommandAdapter = "powercfg" | "nvidia-smi" | "powershell-cim";
+export type CommandAdapter = "powercfg" | "nvidia-smi" | "powershell-cim" | "reg-msi";
+
+// The only registry keys this server may read. MSI Center's MSIAPService
+// persists its user-facing settings state under these HKLM paths.
+export const MSI_REG_KEYS = [
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module",
+  "HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\BaseInfo"
+] as const;
 
 export interface CommandResult {
   ok: boolean;
@@ -98,6 +105,14 @@ const RULES: Record<CommandAdapter, CommandRule> = {
       args[1] === "-NonInteractive" &&
       args[2] === "-Command" &&
       args[3] === POWERSHELL_CIM_QUERY
+  },
+  "reg-msi": {
+    executable: "reg.exe",
+    validateArgs: (args) =>
+      args.length === 3 &&
+      args[0] === "query" &&
+      (MSI_REG_KEYS as readonly string[]).includes(args[1] ?? "") &&
+      args[2] === "/s"
   }
 };
 

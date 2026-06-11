@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, test } from "vitest";
 
-import { POWERSHELL_CIM_QUERY, createCommandRunner } from "../src/core/commandRunner.js";
+import {
+  MSI_REG_KEYS,
+  POWERSHELL_CIM_QUERY,
+  createCommandRunner
+} from "../src/core/commandRunner.js";
 import { defaultConfig } from "../src/core/config.js";
 import { resolveLogPath, sanitizeLogLabel } from "../src/core/paths.js";
 import { READ_ONLY_MODE, assertReadOnlyConfig } from "../src/core/safety.js";
@@ -160,6 +164,53 @@ describe("safe command runner", () => {
         "Get-CimInstance -ClassName Win32_ComputerSystem; Remove-Item C:\\temp\\x | ConvertTo-Json"
       ])
     ).rejects.toThrow(/Arguments are not allowed/);
+  });
+
+  test("allows reg query only against the fixed MSI Center keys", async () => {
+    const calls: Array<{ file: string; args: readonly string[] }> = [];
+    const runner = createCommandRunner({
+      execFileImpl: (file, args, _options, callback) => {
+        calls.push({ file, args: args ?? [] });
+        callback(null, "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center", "");
+        return {} as never;
+      }
+    });
+
+    for (const key of MSI_REG_KEYS) {
+      const result = await runner.run("reg-msi", "reg.exe", ["query", key, "/s"]);
+      expect(result.ok).toBe(true);
+    }
+
+    expect(calls).toHaveLength(MSI_REG_KEYS.length);
+  });
+
+  test("rejects reg writes and non-allowlisted reg keys", async () => {
+    const runner = createCommandRunner({
+      execFileImpl: (_file, _args, _options, callback) => {
+        callback(null, "", "");
+        return {} as never;
+      }
+    });
+    const baseModuleKey = MSI_REG_KEYS[0];
+
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["add", baseModuleKey, "/v", "Mode", "/d", "2"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["delete", baseModuleKey, "/f"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["query", "HKLM\\SOFTWARE\\Microsoft", "/s"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(runner.run("reg-msi", "reg.exe", ["query", baseModuleKey])).rejects.toThrow(
+      /Arguments are not allowed/
+    );
+    await expect(
+      runner.run("reg-msi", "reg.exe", ["query", baseModuleKey, "/s", "/v", "Mode"])
+    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(
+      runner.run("reg-msi", "cmd.exe", ["query", baseModuleKey, "/s"])
+    ).rejects.toThrow(/not allowed for adapter/);
   });
 
   test("does not allow unused process-list command surface in v0.1", async () => {
