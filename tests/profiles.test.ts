@@ -3,10 +3,7 @@ import { describe, expect, test } from "vitest";
 import { createFakeProviders } from "../src/adapters/fakeProviders.js";
 import { decodeMsiCenterState } from "../src/knowledge/decode.js";
 import { dryRunProfile, listProfiles } from "../src/profiles/profileEngine.js";
-import {
-  checkProfileReadiness,
-  evaluateProfileReadiness
-} from "../src/profiles/readiness.js";
+import { checkProfileReadiness, evaluateProfileReadiness } from "../src/profiles/readiness.js";
 import { getTelemetrySnapshot } from "../src/telemetry/snapshot.js";
 
 describe("dry-run profiles", () => {
@@ -30,17 +27,14 @@ describe("dry-run profiles", () => {
     "cooldown",
     "llm_inference",
     "llm_training"
-  ] as const)(
-    "dry-runs %s without changing settings",
-    async (profile) => {
-      const result = await dryRunProfile(profile, createFakeProviders());
+  ] as const)("dry-runs %s without changing settings", async (profile) => {
+    const result = await dryRunProfile(profile, createFakeProviders());
 
-      expect(result.profile).toBe(profile);
-      expect(result.note).toBe("v0.1 dry run only; no settings were changed");
-      expect(result.planned_future_actions.length).toBeGreaterThan(0);
-      expect(result.safety_checks).toContain("Read-only mode is enforced.");
-    }
-  );
+    expect(result.profile).toBe(profile);
+    expect(result.note).toBe("v0.1 dry run only; no settings were changed");
+    expect(result.planned_future_actions.length).toBeGreaterThan(0);
+    expect(result.safety_checks).toContain("Read-only mode is enforced.");
+  });
 
   test("blocks gaming_ac when the machine is on battery", async () => {
     const result = await dryRunProfile(

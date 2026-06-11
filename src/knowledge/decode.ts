@@ -119,10 +119,7 @@ export function decodeMsiCenterState(raw: MsiCenterRawState): MsiCenterState {
         typeof preset.Performance === "number" ? preset.Performance : null,
         scenarioPerformanceMapping
       ),
-      fan: decodeWithMapping(
-        typeof preset.Fan === "number" ? preset.Fan : null,
-        scenarioFanMapping
-      )
+      fan: decodeWithMapping(typeof preset.Fan === "number" ? preset.Fan : null, scenarioFanMapping)
     });
   }
 

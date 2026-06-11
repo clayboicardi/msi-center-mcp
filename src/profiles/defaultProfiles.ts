@@ -4,8 +4,7 @@ import type { ProfileDefinition } from "./profiles.js";
 const BALANCED_PLAN_GUID = "381b4222-f694-41f0-9685-ff5bb260df2e";
 const HIGH_PERFORMANCE_PLAN_GUID = "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c";
 
-const SCENARIO_FIX =
-  "MSI Center > Features > User Scenario: select the target scenario manually.";
+const SCENARIO_FIX = "MSI Center > Features > User Scenario: select the target scenario manually.";
 const PLAN_FIX_HIGH =
   "Windows: powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c (High performance), or Settings > Power.";
 const PLAN_FIX_BALANCED =

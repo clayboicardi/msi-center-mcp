@@ -196,9 +196,9 @@ describe("safe command runner", () => {
     await expect(
       runner.run("reg-msi", "reg.exe", ["add", baseModuleKey, "/v", "Mode", "/d", "2"])
     ).rejects.toThrow(/Arguments are not allowed/);
-    await expect(
-      runner.run("reg-msi", "reg.exe", ["delete", baseModuleKey, "/f"])
-    ).rejects.toThrow(/Arguments are not allowed/);
+    await expect(runner.run("reg-msi", "reg.exe", ["delete", baseModuleKey, "/f"])).rejects.toThrow(
+      /Arguments are not allowed/
+    );
     await expect(
       runner.run("reg-msi", "reg.exe", ["query", "HKLM\\SOFTWARE\\Microsoft", "/s"])
     ).rejects.toThrow(/Arguments are not allowed/);
@@ -208,9 +208,9 @@ describe("safe command runner", () => {
     await expect(
       runner.run("reg-msi", "reg.exe", ["query", baseModuleKey, "/s", "/v", "Mode"])
     ).rejects.toThrow(/Arguments are not allowed/);
-    await expect(
-      runner.run("reg-msi", "cmd.exe", ["query", baseModuleKey, "/s"])
-    ).rejects.toThrow(/not allowed for adapter/);
+    await expect(runner.run("reg-msi", "cmd.exe", ["query", baseModuleKey, "/s"])).rejects.toThrow(
+      /not allowed for adapter/
+    );
   });
 
   test("does not allow unused process-list command surface in v0.1", async () => {

@@ -52,7 +52,12 @@ function parseRow(line: string): BatteryRow | null {
   const timeMs = Date.parse(time ?? "");
   const designed = Number(designedText);
   const fullCharged = Number(fullText);
-  if (!time || !Number.isFinite(timeMs) || !Number.isFinite(designed) || !Number.isFinite(fullCharged)) {
+  if (
+    !time ||
+    !Number.isFinite(timeMs) ||
+    !Number.isFinite(designed) ||
+    !Number.isFinite(fullCharged)
+  ) {
     return null;
   }
 

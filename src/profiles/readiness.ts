@@ -6,12 +6,7 @@ import { mergeWarnings } from "../core/result.js";
 import { getTelemetrySnapshot } from "../telemetry/snapshot.js";
 import type { ActivePowerPlan, GpuSnapshot, OsSnapshot, PowerStatus } from "../telemetry/types.js";
 import { DEFAULT_PROFILES } from "./defaultProfiles.js";
-import type {
-  ProfileName,
-  ReadinessExpectation,
-  ReadinessRule,
-  RuleSeverity
-} from "./profiles.js";
+import type { ProfileName, ReadinessExpectation, ReadinessRule, RuleSeverity } from "./profiles.js";
 
 export interface ReadinessContext {
   msi: MsiCenterState;

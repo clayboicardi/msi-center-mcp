@@ -112,7 +112,8 @@ const processSummary: ProcessSummary = {
   warnings: []
 };
 
-const MSI_BASE = "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module";
+const MSI_BASE =
+  "HKEY_LOCAL_MACHINE\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module";
 
 // Mirrors the values observed on the real Vector A16 HX (see
 // fixtures/reg-query-base-module.txt).

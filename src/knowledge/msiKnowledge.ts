@@ -29,11 +29,25 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
     how_it_works:
       "Each scenario programs the Embedded Controller (EC) with a shift mode. The Linux msi-ec driver names these eco/comfort/sport/turbo; MSI Center surfaces them as Super Battery, Silent/Balanced, and Extreme Performance. The EC then enforces CPU package power limits, GPU TGP / Dynamic Boost headroom, and the fan curve. MSIAPService persists the selection to HKLM\\SOFTWARE\\WOW6432Node\\MSI\\MSI Center\\Component\\Base Module\\User Scenario\\Mode.",
     values: [
-      { value: "extreme_performance", meaning: "Maximum CPU/GPU power limits and aggressive fans; full GPU Dynamic Boost headroom. AC power strongly expected." },
+      {
+        value: "extreme_performance",
+        meaning:
+          "Maximum CPU/GPU power limits and aggressive fans; full GPU Dynamic Boost headroom. AC power strongly expected."
+      },
       { value: "balanced", meaning: "Default daily mode; moderate power limits, auto fan." },
-      { value: "silent", meaning: "Caps power limits and fan speed for low noise; sustained clocks drop noticeably." },
-      { value: "super_battery", meaning: "Eco shift mode; heavily capped CPU/GPU for battery runtime." },
-      { value: "ai_smart_auto", meaning: "MSI AI Engine picks a scenario automatically based on detected activity. Switching is opaque; avoid for benchmarking or sustained ML runs." }
+      {
+        value: "silent",
+        meaning: "Caps power limits and fan speed for low noise; sustained clocks drop noticeably."
+      },
+      {
+        value: "super_battery",
+        meaning: "Eco shift mode; heavily capped CPU/GPU for battery runtime."
+      },
+      {
+        value: "ai_smart_auto",
+        meaning:
+          "MSI AI Engine picks a scenario automatically based on detected activity. Switching is opaque; avoid for benchmarking or sustained ML runs."
+      }
     ],
     tradeoffs:
       "Extreme Performance buys sustained clocks at the cost of noise and heat dumped into the chassis/desk. Silent can cut sustained GPU throughput 20-40% on long runs. AI/Smart Auto can silently downshift mid-run, which looks like mysterious throughput loss in training logs.",
@@ -43,8 +57,15 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "gaming_ac/llm_training readiness rules expect Extreme Performance on AC."
     ],
     recommendations: [
-      { workload: "llm_training", advice: "Extreme Performance, AC plugged, Cooler Boost optional for multi-hour runs." },
-      { workload: "llm_inference", advice: "Extreme Performance or Balanced; Balanced is fine for short interactive sessions and much quieter." },
+      {
+        workload: "llm_training",
+        advice: "Extreme Performance, AC plugged, Cooler Boost optional for multi-hour runs."
+      },
+      {
+        workload: "llm_inference",
+        advice:
+          "Extreme Performance or Balanced; Balanced is fine for short interactive sessions and much quieter."
+      },
       { workload: "quiet_work", advice: "Silent; accept reduced sustained clocks." },
       { workload: "battery", advice: "Super Battery and avoid GPU workloads entirely." }
     ],
@@ -71,7 +92,11 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "GPU temperature ceiling on this class of laptop GPU is ~87C throttle; sustained 75-83C under load is normal."
     ],
     recommendations: [
-      { workload: "llm_training", advice: "Auto curve under Extreme Performance is adequate; enable Cooler Boost for multi-hour saturated runs if noise is acceptable, or set an Advanced curve ~10% above Auto." },
+      {
+        workload: "llm_training",
+        advice:
+          "Auto curve under Extreme Performance is adequate; enable Cooler Boost for multi-hour saturated runs if noise is acceptable, or set an Advanced curve ~10% above Auto."
+      },
       { workload: "llm_inference", advice: "Auto. Inference bursts rarely heat-soak the chassis." },
       { workload: "quiet_work", advice: "Silent fan mode within the Silent scenario." }
     ],
@@ -90,8 +115,14 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
     how_it_works:
       "MSHybrid routes the dGPU's output through the iGPU framebuffer, letting the dGPU power-gate to near 0W when idle. Discrete mode connects the panel mux straight to the dGPU, eliminating the copy hop (slightly lower display latency, required for some G-Sync paths) but keeping the dGPU always powered. Stored at GeneralSetting\\GPU_Switch; changing it requires a reboot.",
     values: [
-      { value: "mshybrid", meaning: "iGPU drives the panel; dGPU powers up on demand. Best battery life." },
-      { value: "discrete", meaning: "dGPU drives the panel directly. Best display latency; worst idle battery." }
+      {
+        value: "mshybrid",
+        meaning: "iGPU drives the panel; dGPU powers up on demand. Best battery life."
+      },
+      {
+        value: "discrete",
+        meaning: "dGPU drives the panel directly. Best display latency; worst idle battery."
+      }
     ],
     tradeoffs:
       "CUDA/compute workloads (LLM inference, training) are NOT meaningfully affected by this switch — compute runs on the dGPU either way. Discrete mode mainly helps competitive gaming display latency. MSHybrid saves 10-20W at idle.",
@@ -101,9 +132,18 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "VRAM is unaffected by the switch; the RTX keeps its full 12GB either way."
     ],
     recommendations: [
-      { workload: "llm_training", advice: "Leave as-is. The switch does not change CUDA throughput; do not waste a reboot." },
-      { workload: "llm_inference", advice: "Leave as-is (MSHybrid is fine; compute is unaffected)." },
-      { workload: "gaming", advice: "Discrete for lowest display latency on the internal panel; MSHybrid otherwise." },
+      {
+        workload: "llm_training",
+        advice: "Leave as-is. The switch does not change CUDA throughput; do not waste a reboot."
+      },
+      {
+        workload: "llm_inference",
+        advice: "Leave as-is (MSHybrid is fine; compute is unaffected)."
+      },
+      {
+        workload: "gaming",
+        advice: "Discrete for lowest display latency on the internal panel; MSHybrid otherwise."
+      },
       { workload: "battery", advice: "MSHybrid, always." }
     ],
     sources: ["MSI MSHybrid/Discrete documentation and panel-mux behavior (community consensus)"],
@@ -118,9 +158,18 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
     how_it_works:
       "The EC stops charging at the configured threshold. MSI's tiers: Best for Mobility (~100%), Balanced (~70-80%), Best for Battery (~50-60%). Stored at GeneralSetting\\BatteryMode. The AI_Battery service separately logs capacity history to C:\\ProgramData\\MSI\\AI_Battery\\*_log.csv (DesignedCapacity vs FullChargedCapacity = wear).",
     values: [
-      { value: "best_for_mobility_charge_to_100", meaning: "Charge to full; maximum runtime, fastest aging." },
-      { value: "balanced_charge_to_80", meaning: "Stop near 80%; good compromise for mostly-plugged use." },
-      { value: "best_for_battery_charge_to_60", meaning: "Stop near 60%; best longevity for desk-bound machines." }
+      {
+        value: "best_for_mobility_charge_to_100",
+        meaning: "Charge to full; maximum runtime, fastest aging."
+      },
+      {
+        value: "balanced_charge_to_80",
+        meaning: "Stop near 80%; good compromise for mostly-plugged use."
+      },
+      {
+        value: "best_for_battery_charge_to_60",
+        meaning: "Stop near 60%; best longevity for desk-bound machines."
+      }
     ],
     tradeoffs:
       "Charge caps trade runtime for battery longevity. A machine that trains models plugged in for hours benefits from a cap; flip to 100% the night before travel.",
@@ -129,10 +178,16 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "get_battery_health reads the AI_Battery log to report actual wear."
     ],
     recommendations: [
-      { workload: "llm_training", advice: "Any tier; Balanced/Best for Battery preferred since the machine is on AC anyway." },
+      {
+        workload: "llm_training",
+        advice: "Any tier; Balanced/Best for Battery preferred since the machine is on AC anyway."
+      },
       { workload: "travel", advice: "Best for Mobility the night before; switch back after." }
     ],
-    sources: ["MSI Battery Master documentation tiers (community consensus)", "Live AI_Battery log observation"],
+    sources: [
+      "MSI Battery Master documentation tiers (community consensus)",
+      "Live AI_Battery log observation"
+    ],
     confidence: "community"
   },
   {
@@ -145,11 +200,17 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "Driver-level FPS cap plus efficiency-biased clocking, negotiated between the NVIDIA driver and the EC acoustic target. Mirrored at GeneralSetting\\WhisperMode/WhisperModeEnable.",
     tradeoffs:
       "Only relevant to real-time rendering. It does nothing useful for compute workloads and would only mask GPU throughput if a future driver applied limits broadly — keep it off on this machine.",
-    interactions: ["Gaming-only feature; orthogonal to CUDA compute.", "Off (0) on this machine as observed."],
+    interactions: [
+      "Gaming-only feature; orthogonal to CUDA compute.",
+      "Off (0) on this machine as observed."
+    ],
     recommendations: [
       { workload: "llm_training", advice: "Off." },
       { workload: "llm_inference", advice: "Off." },
-      { workload: "quiet_gaming", advice: "On, if fan noise during light games matters more than FPS." }
+      {
+        workload: "quiet_gaming",
+        advice: "On, if fan noise during light games matters more than FPS."
+      }
     ],
     sources: ["NVIDIA WhisperMode documentation (community consensus)"],
     confidence: "community"
@@ -171,18 +232,23 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
     ],
     recommendations: [
       { workload: "llm_training", advice: "High performance plan + Extreme Performance scenario." },
-      { workload: "llm_inference", advice: "Either plan; High performance shaves CPU ramp latency on token streaming." },
+      {
+        workload: "llm_inference",
+        advice: "Either plan; High performance shaves CPU ramp latency on token streaming."
+      },
       { workload: "battery", advice: "Balanced plan + Super Battery scenario." }
     ],
-    sources: ["powercfg observation on this machine", "Windows processor power management documentation"],
+    sources: [
+      "powercfg observation on this machine",
+      "Windows processor power management documentation"
+    ],
     confidence: "verified_live"
   },
   {
     id: "refresh_rate_and_power",
     title: "Display refresh rate and power",
     ui_path: "Windows Settings > Display > Advanced; MSI Center may suggest reductions",
-    what_it_does:
-      "The 240Hz QHD+ panel can run at lower refresh rates to save power on battery.",
+    what_it_does: "The 240Hz QHD+ panel can run at lower refresh rates to save power on battery.",
     how_it_works:
       "Panel self-refresh power scales with refresh rate; 240Hz to 60Hz saves several watts. MSI Center mirrors panel limits at GeneralSetting\\MaxDisplayFrequency/MinDisplayFrequency (240/60 observed).",
     tradeoffs: "Smoothness vs battery. Irrelevant while plugged in.",
@@ -211,8 +277,16 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "Ollama keeps models resident; unload (ollama stop) before switching to a training job."
     ],
     recommendations: [
-      { workload: "llm_inference", advice: "Models <=10GB file size; Balanced or Extreme Performance scenario; either Windows plan; verify VRAM headroom before loading a second model." },
-      { workload: "llm_training", advice: "AC required; Extreme Performance + High performance plan; close browsers (RAM); Cooler Boost for multi-hour runs; verify with a 60s telemetry capture that clocks hold after 10 minutes." },
+      {
+        workload: "llm_inference",
+        advice:
+          "Models <=10GB file size; Balanced or Extreme Performance scenario; either Windows plan; verify VRAM headroom before loading a second model."
+      },
+      {
+        workload: "llm_training",
+        advice:
+          "AC required; Extreme Performance + High performance plan; close browsers (RAM); Cooler Boost for multi-hour runs; verify with a 60s telemetry capture that clocks hold after 10 minutes."
+      },
       { workload: "embeddings", advice: "nomic-embed-text is tiny; any scenario works." }
     ],
     sources: [
@@ -236,9 +310,15 @@ export const KNOWLEDGE_ENTRIES: KnowledgeEntry[] = [
       "cpu_load_percent is null on the first sample (needs a delta)."
     ],
     recommendations: [
-      { workload: "any", advice: "Baseline-capture before changing a setting, capture again after, then compare_telemetry_logs — never eyeball two single snapshots." }
+      {
+        workload: "any",
+        advice:
+          "Baseline-capture before changing a setting, capture again after, then compare_telemetry_logs — never eyeball two single snapshots."
+      }
     ],
-    sources: ["Live observation on this machine; NVIDIA laptop GPU thermal envelope (community consensus)"],
+    sources: [
+      "Live observation on this machine; NVIDIA laptop GPU thermal envelope (community consensus)"
+    ],
     confidence: "community"
   }
 ];

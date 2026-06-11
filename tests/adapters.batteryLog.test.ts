@@ -29,9 +29,10 @@ describe("MSI AI_Battery log adapter", () => {
     const temp = await mkdtemp(path.join(tmpdir(), "msi-battery-"));
     await writeFile(
       path.join(temp, "1_log.csv"),
-      ["LogTime,DesignedCapacity,FullChargedCapacity,AC/DC,LifePercent", "2026/06/10 05:15:42,87395,88073,AC,96"].join(
-        "\n"
-      ),
+      [
+        "LogTime,DesignedCapacity,FullChargedCapacity,AC/DC,LifePercent",
+        "2026/06/10 05:15:42,87395,88073,AC,96"
+      ].join("\n"),
       "utf8"
     );
     const provider = createMsiBatteryLogProvider(temp);

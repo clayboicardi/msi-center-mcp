@@ -86,9 +86,7 @@ export function createMsiCenterRegistryProvider(
 
       for (const result of results) {
         if (!result.ok) {
-          warningSets.push(
-            result.warnings.length > 0 ? result.warnings : ["reg query failed."]
-          );
+          warningSets.push(result.warnings.length > 0 ? result.warnings : ["reg query failed."]);
           continue;
         }
 
