@@ -23,7 +23,12 @@ Registry integers mean different things on different MSI machines. Decoded value
 - `inferred` — plausible hypothesis (UI ordering, single observation)
 - `unknown` — no mapping; readiness checks report **unknown, never a false failure**
 
-Machine profiles are selected at runtime from the EC firmware signature. Currently calibrated: **MSI Vector A16 HX A8WHG** (Ryzen 9 8940HX, RTX 5070 Ti Laptop 12GB, MSI Center 2.0.70). Everything else gets the generic profile at reduced confidence — still useful, honestly labeled. Calibrating your own machine takes ~10 minutes (see [docs/msi-center-knowledge.md](docs/msi-center-knowledge.md)); contributions of new machine profiles are welcome.
+Machine profiles are selected at runtime from registry signals (EC firmware signature on notebooks; platform type + board model on desktops). Currently calibrated:
+
+- **MSI Vector A16 HX A8WHG** notebook (Ryzen 9 8940HX, RTX 5070 Ti Laptop 12GB, MSI Center 2.0.70)
+- **MSI PRO B760M-VC WIFI (MS-7D37)** desktop (i5-14400F, RTX 4060, MSI Center SDK 3.2026) — desktop MSI Center uses a different registry family entirely (string scenario names under `SyncData`, per-fan state under `Setting\FANn`, Zero Frozr)
+
+Everything else gets the generic profile at reduced confidence — still useful, honestly labeled. Calibrating your own machine takes ~10 minutes (see [docs/msi-center-knowledge.md](docs/msi-center-knowledge.md)); contributions of new machine profiles are welcome.
 
 ## MCP Tools (15)
 

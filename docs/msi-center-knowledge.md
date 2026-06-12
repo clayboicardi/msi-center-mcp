@@ -1,6 +1,10 @@
-# MSI Center Knowledge — Vector A16 HX A8WHG
+# MSI Center Knowledge
 
-Human-readable companion to the `explain_msi_setting` tool (canonical entries: `src/knowledge/msiKnowledge.ts`; registry decode tables: `src/knowledge/msiRegistryMap.ts`). Machine: Ryzen 9 8940HX (16C/32T), RTX 5070 Ti Laptop 12GB, 16GB DDR5, 240Hz QHD+, Windows 11 Home, MSI Center 2.0.70 (UWP), EC `15MMIMS1`.
+Human-readable companion to the `explain_msi_setting` tool (canonical entries: `src/knowledge/msiKnowledge.ts`; registry decode tables: per-machine profiles in `src/knowledge/machines/`). Two machines are calibrated: the **Vector A16 HX A8WHG notebook** (sections below) and the **PRO B760M-VC WIFI desktop** ([its own section](#desktop-msi-center--pro-b760m-vc-wifi-ms-7d37) at the end — desktop MSI Center uses a completely different registry family).
+
+## Notebook: Vector A16 HX A8WHG
+
+Machine: Ryzen 9 8940HX (16C/32T), RTX 5070 Ti Laptop 12GB, 16GB DDR5, 240Hz QHD+, Windows 11 Home, MSI Center 2.0.70 (UWP), EC `15MMIMS1`.
 
 ## Where MSI Center state lives
 
@@ -60,3 +64,43 @@ Mappings live in per-machine profiles (`src/knowledge/machines/`), selected at r
 - Inference: `check_profile_readiness {"profile":"llm_inference"}` — wants GPU present, VRAM mostly free, Balanced/Extreme scenario, AI Engine off.
 - Training: `check_profile_readiness {"profile":"llm_training"}` — requires AC + GPU; wants Extreme Performance, High performance plan, cool start (≤60°C), free VRAM, ≤10GB RAM in use, AI Engine off.
 - Verify sustained behavior with `capture_telemetry_log` (30-60s) ~10 minutes into a run: falling `clocks_current_graphics_mhz` with `temperature_gpu_c` near 87 = thermal throttle (raise fans); near-100% utilization at low power draw = memory-bandwidth-bound (normal for token generation).
+
+## Desktop MSI Center — PRO B760M-VC WIFI (MS-7D37)
+
+Machine: i5-14400F, RTX 4060 8GB (VENTUS 2X), 32GB DDR5, NCT6687D SuperIO, Windows 11 Home, MSI Center SDK 3.2026.0526.01. Desktop MSI Center has **no `Component\Base Module` at all** — a different component family with different keys:
+
+```
+HKLM\SOFTWARE\WOW6432Node\MSI\MSI Center\
+  SyncData\Mode_Scenario       ← current User Scenario (DISPLAY-NAME STRING, not an int)
+  SyncData\Data_Scenario       ← comma list of available scenarios
+  Component\User Scenario\User Scenario\
+    Mode / RealMode            ← internal vocab ("Performance" = Extreme Performance)
+    CurrentFanMode             ← "Performance" / "Balance" (sic) / "Silent" / "None"
+    CoolingWizardMode          ← 1 observed; consistent with "Follow MSI Center Mode"
+  Setting\FAN1..FANn           ← per-fan Mode int + Duty + Level_i_T/D curve points
+  Setting\GPU Sync Fan         ← sync-system-fans-to-GPU-temp feature (Control, Mode)
+  Component\Graphics Fan Tool\ZeroFrozr ← GPU zero-fan policy (persisted on Apply)
+  BaseInfo\PlatformType=4, Model=7D37   ← profile matcher signals (no EC version string)
+```
+
+Machine matching: desktops carry no `Scenario\ECversion`, so the profile matcher uses `BaseInfo\PlatformType` (4 = desktop) plus the board `Model`.
+
+### Calibration state (live calibration 2026-06-11)
+
+| Raw value                      | Mapping                                                              | Confidence        | Notes                                                                                                                   |
+| ------------------------------ | -------------------------------------------------------------------- | ----------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `SyncData\Mode_Scenario`       | display name verbatim: Extreme Performance/Balanced/Silent/Customize | **verified_live** | All four clicks watched in the registry (600ms watcher); each writes the display name                                   |
+| `Setting\FANn\Mode`            | 1=smart curve, 2=manual duty                                         | inferred          | FAN1 (Mode=1) carries curve points, FAN2/4/5 (Mode=2) only fixed Duty; never exercised — changes require Apply          |
+| `Graphics Fan Tool\ZeroFrozr`  | 1=off, 2=on                                                          | inferred          | Correlation: UI toggle off flipped `Engine\ZeroFrozrStatus` 2→1 live; persisted value never changed (Apply not clicked) |
+| `Setting\GPU Sync Fan\Control` | 1=enabled (hypothesis)                                               | inferred          | Matches the AI-Cooling-style curves under `GPU Sync Fan\Block`                                                          |
+
+### Desktop quirks (all observed live)
+
+- **Transient `None`:** while the Cooling Wizard UI is open, MSI Center flaps `Mode_Scenario` between the real scenario and the string `None` at sub-second cadence (also flaps `EngineerMode` and `Engine\ZeroFrozrStatus`). A null scenario decode usually means this transient — re-read after MSI Center settles.
+- **Apply gates persistence:** UI toggles (Zero Frozr, Cooling Wizard fan modes) update live engine state (`Component\Engine\*`) immediately but only write the persisted settings keys on Apply.
+- **Internal vocab differs from display names:** `Mode`/`RealMode` say `Performance` while the UI and `SyncData` say `Extreme Performance`; `CurrentFanMode` spells Balanced as `Balance`.
+- **MSI Center swaps Windows power plans per scenario:** `Component\Engine\PwrPlanBeforeGUID` stores the previous plan. On this board Extreme Performance activates an **Ultimate Performance** plan whose GUID is machine-specific — so GUID-pinned plan readiness rules (e.g. `llm-train-plan`, which expects the canonical High performance GUID) report a recommended-severity fail that is actually fine. Possible future fix: match plans by name.
+- **Cooling Wizard structure:** fan settings live in Cooling Wizard with Performance/Silent/Custom modes plus top-level `Follow MSI Center Mode` / `BIOS mode` / `Customize`; in Follow mode the fan policy tracks the User Scenario.
+- **Degrades as designed:** no battery keys (battery health unavailable, `ac_power` = `unknown` — readiness treats unknown as non-blocking), no GPU switch, no WhisperMode.
+
+Calibrating another desktop follows the same procedure as notebooks (see above) — watch `SyncData\Mode_Scenario` instead of `Base Module\User Scenario\Mode`.

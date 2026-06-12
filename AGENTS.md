@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository is a read-only local MCP server giving Claude Code full insight into this MSI laptop: telemetry, Windows power state, live MSI Center settings, battery health, a settings knowledge base, and per-task readiness checks.
+This repository is a read-only local MCP server giving Claude Code full insight into an MSI Windows machine (notebook or desktop): telemetry, Windows power state, live MSI Center settings, battery health (notebooks), a settings knowledge base, and per-task readiness checks.
 
 ## History and ownership
 

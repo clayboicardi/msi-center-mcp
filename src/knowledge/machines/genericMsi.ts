@@ -63,7 +63,7 @@ export const GENERIC_MSI_PROFILE: MachineProfile = {
         customize: "customize"
       },
       confidence: "inferred",
-      note: "Desktop MSI Center stores the active scenario as its display name in SyncData\\Mode_Scenario. Names observed on a PRO B760M-VC WIFI desktop; your build may expose different scenarios — SyncData\\Data_Scenario lists what exists."
+      note: "Desktop MSI Center stores the active scenario as its display name in SyncData\\Mode_Scenario. Names verified on a PRO B760M-VC WIFI desktop; your build may expose different scenarios — SyncData\\Data_Scenario lists what exists. While the MSI Center UI is interacting it may transiently write 'None'; treat a null decode as transient and re-read."
     },
     desktopSystemFanMode: {
       map: {

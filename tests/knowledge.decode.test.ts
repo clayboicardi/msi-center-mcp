@@ -133,8 +133,28 @@ describe("Desktop MSI Center state decoding (PRO B760M-VC WIFI)", () => {
 
     expect(state.user_scenario.raw).toBe("Extreme Performance");
     expect(state.user_scenario.decoded).toBe("extreme_performance");
-    // Shipped at inferred until live-calibrated on the machine.
-    expect(state.user_scenario.confidence).toBe("inferred");
+    // Live-calibrated 2026-06-11: all four scenario names watched in the
+    // registry during a UI click-through.
+    expect(state.user_scenario.confidence).toBe("verified_live");
+  });
+
+  test("the transient 'None' scenario decodes to unknown, never a false value", () => {
+    // While the Cooling Wizard UI is open, MSI Center flaps Mode_Scenario
+    // between the real scenario and 'None' at sub-second cadence.
+    const keys = parseRegQueryOutput(desktopFixture).keys;
+    const syncDataKey = Object.keys(keys).find((key) => key.endsWith("\\SyncData")) ?? "";
+    const state = decodeMsiCenterState({
+      available: true,
+      keys: {
+        ...keys,
+        [syncDataKey]: { ...keys[syncDataKey], Mode_Scenario: "None" }
+      },
+      warnings: []
+    });
+
+    expect(state.user_scenario.raw).toBe("None");
+    expect(state.user_scenario.decoded).toBeNull();
+    expect(state.user_scenario.confidence).toBe("unknown");
   });
 
   test("surfaces desktop fan state with raw values and honest confidence", () => {
@@ -169,10 +189,11 @@ describe("Desktop MSI Center state decoding (PRO B760M-VC WIFI)", () => {
     expect(desktop?.gpu_sync_fan?.enabled_raw).toBe(1);
     expect(desktop?.gpu_sync_fan?.mode_name).toBe("Performance");
 
-    // Zero Frozr int vocabulary is uncalibrated: raw exposed, decode unknown.
+    // Zero Frozr vocabulary inferred by correlation (Engine\ZeroFrozrStatus
+    // flipped 2->1 live on UI toggle-off); persisted value never watched.
     expect(desktop?.zero_frozr.raw).toBe(2);
-    expect(desktop?.zero_frozr.decoded).toBeNull();
-    expect(desktop?.zero_frozr.confidence).toBe("unknown");
+    expect(desktop?.zero_frozr.decoded).toBe("on");
+    expect(desktop?.zero_frozr.confidence).toBe("inferred");
   });
 
   test("laptop-only settings stay null/unknown on the desktop", () => {
